@@ -33,6 +33,11 @@ export default function AdminProducts() {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Bulk Delete & Selection State
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState<{ type: 'selected' | 'all'; count: number } | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
   // Form State
   const [formData, setFormData] = useState({
     name_ar: '',
@@ -452,6 +457,101 @@ export default function AdminProducts() {
     }
   };
 
+  const handleSelectAll = () => {
+    const filteredIds = filtered.map(p => p.id);
+    const allFilteredSelected = filteredIds.length > 0 && filteredIds.every(id => selectedIds.includes(id));
+
+    if (allFilteredSelected) {
+      setSelectedIds(prev => prev.filter(id => !filteredIds.includes(id)));
+    } else {
+      setSelectedIds(Array.from(new Set([...selectedIds, ...filteredIds])));
+    }
+  };
+
+  const handleSelectRow = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (!confirmBulkDelete) return;
+
+    const isAuthOk = await ensureAuthenticatedAdmin();
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session?.user && !isAuthOk) {
+      showToast(
+        tr('جلسة Supabase الخاصة بالمشرف مفقودة. يرجى تسجيل الدخول مجدداً.', 'Admin Supabase session is missing. Please sign in again.'),
+        'error'
+      );
+      return;
+    }
+
+    setIsBulkDeleting(true);
+
+    try {
+      const isDeleteAll = confirmBulkDelete.type === 'all';
+      const targetProducts = isDeleteAll ? products : products.filter(p => selectedIds.includes(p.id));
+      const targetIds = targetProducts.map(p => p.id);
+
+      if (targetIds.length === 0) {
+        setConfirmBulkDelete(null);
+        setIsBulkDeleting(false);
+        return;
+      }
+
+      const storageFiles = targetProducts.flatMap(p => 
+        (p.images || []).map(url => ({ bucket: 'product-images', urlOrPath: url }))
+      );
+
+      const res = await deleteEntity({
+        tableName: 'products',
+        id: targetIds,
+        storageFiles,
+        localStorageKeys: ['local_admin_products', 'products'],
+        eventToDispatch: 'products_updated',
+      });
+
+      if (!res.success) {
+        const errorMsg = res.error || 'Database delete operation failed.';
+        console.error('Delete products DB error:', errorMsg);
+        showToast(
+          tr(`فشل حذف المنتجات من قاعدة البيانات: ${errorMsg}`, `Échec de la suppression dans la base de données: ${errorMsg}`),
+          'error'
+        );
+        return;
+      }
+
+      const updatedList = isDeleteAll ? [] : products.filter(p => !targetIds.includes(p.id));
+      setProducts(updatedList);
+      localStorage.setItem('local_admin_products', JSON.stringify(updatedList));
+      localStorage.setItem('products', JSON.stringify(updatedList));
+      window.dispatchEvent(new Event('products_updated'));
+      window.dispatchEvent(new Event('storage'));
+
+      if (isDeleteAll) {
+        setSelectedIds([]);
+        showToast(
+          tr('تم حذف جميع المنتجات من قاعدة البيانات بنجاح', 'Tous les produits ont été supprimés de la base de données avec succès'),
+          'success'
+        );
+      } else {
+        setSelectedIds(prev => prev.filter(id => !targetIds.includes(id)));
+        showToast(
+          tr(`تم حذف ${targetIds.length} منتج(ـات) من قاعدة البيانات بنجاح`, `${targetIds.length} produit(s) supprimé(s) de la base de données avec succès`),
+          'success'
+        );
+      }
+
+      setConfirmBulkDelete(null);
+    } catch (err: unknown) {
+      console.error('Bulk delete error:', err);
+      showToast(err instanceof Error ? err.message : tr('خطأ أثناء الحذف', 'Erreur de suppression'), 'error');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const filtered = products.filter(p => {
     const matchesSearch = 
       p.name_ar?.toLowerCase().includes(search.toLowerCase()) ||
@@ -475,13 +575,36 @@ export default function AdminProducts() {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAddModal}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-lg shadow-emerald-950/40"
-        >
-          <Plus className="w-5 h-5" />
-          {tr('إضافة منتج جديد', 'Nouveau Produit')}
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {selectedIds.length > 0 && (
+            <button
+              onClick={() => setConfirmBulkDelete({ type: 'selected', count: selectedIds.length })}
+              className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-3.5 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-lg shadow-rose-950/40"
+            >
+              <Trash2 className="w-4 h-4" />
+              {tr(`حذف المحدد (${selectedIds.length})`, `Supprimer la sélection (${selectedIds.length})`)}
+            </button>
+          )}
+
+          {products.length > 0 && (
+            <button
+              onClick={() => setConfirmBulkDelete({ type: 'all', count: products.length })}
+              className="flex items-center gap-2 bg-slate-900 hover:bg-rose-950/80 text-rose-400 hover:text-rose-300 border border-rose-900/60 hover:border-rose-700/80 px-3.5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+              title={tr('حذف جميع المنتجات من قاعدة البيانات', 'Supprimer tous les produits de la base de données')}
+            >
+              <Trash2 className="w-4 h-4" />
+              {tr('حذف جميع المنتجات', 'Tout Supprimer')}
+            </button>
+          )}
+
+          <button
+            onClick={handleOpenAddModal}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-lg shadow-emerald-950/40"
+          >
+            <Plus className="w-5 h-5" />
+            {tr('إضافة منتج جديد', 'Nouveau Produit')}
+          </button>
+        </div>
       </div>
 
       {/* Filters & Search */}
@@ -532,6 +655,15 @@ export default function AdminProducts() {
           <table className="w-full text-sm text-slate-300 text-start">
             <thead className="bg-slate-900 border-b border-slate-800 text-xs text-slate-400 uppercase">
               <tr>
+                <th className="py-3 px-4 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={filtered.length > 0 && filtered.every(p => selectedIds.includes(p.id))}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                    title={tr('تحديد الكل', 'Tout sélectionner')}
+                  />
+                </th>
                 <th className="py-3 px-4 text-start">{tr('المنتج', 'Produit')}</th>
                 <th className="py-3 px-4 text-start">{tr('الرمز (SKU)', 'SKU')}</th>
                 <th className="py-3 px-4 text-start">{tr('السعر', 'Prix')}</th>
@@ -542,9 +674,19 @@ export default function AdminProducts() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {filtered.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-900/40 transition-colors">
-                  <td className="py-3.5 px-4 font-medium text-slate-100 flex items-center gap-3">
+              {filtered.map((p) => {
+                const isSelected = selectedIds.includes(p.id);
+                return (
+                  <tr key={p.id} className={`hover:bg-slate-900/40 transition-colors ${isSelected ? 'bg-slate-900/60' : ''}`}>
+                    <td className="py-3.5 px-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleSelectRow(p.id)}
+                        className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                      />
+                    </td>
+                    <td className="py-3.5 px-4 font-medium text-slate-100 flex items-center gap-3">
                     <img 
                       src={p.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&auto=format&fit=crop&q=80'} 
                       alt={p.name_ar} 
@@ -616,10 +758,11 @@ export default function AdminProducts() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500">
+                  <td colSpan={8} className="py-12 text-center text-slate-500">
                     <Package className="w-10 h-10 mx-auto mb-2 opacity-30" />
                     <p>{tr('لا توجد منتجات مطابقة للبحث', 'Aucun produit ne correspond')}</p>
                   </td>
@@ -920,6 +1063,71 @@ export default function AdminProducts() {
               >
                 {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
                 {tr('حذف نهائي', 'Supprimer Définitivement')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK DELETE CONFIRMATION MODAL */}
+      {confirmBulkDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-5 shadow-2xl">
+            <div className="flex items-center gap-3 text-rose-500">
+              <div className="p-3 bg-rose-950/80 border border-rose-800/80 rounded-xl">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-100">
+                  {confirmBulkDelete.type === 'all'
+                    ? tr('تأكيد حذف جميع المنتجات', 'Confirmer la suppression de TOUS les produits')
+                    : tr(`تأكيد حذف ${confirmBulkDelete.count} منتج(ـات)`, `Confirmer la suppression de ${confirmBulkDelete.count} produit(s)`)}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {tr('هذا الإجراء سينفذ حذفا نهائياً من قاعدة البيانات', 'Cette action est irréversible dans la base de données')}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-rose-950/30 border border-rose-900/40 p-4 rounded-xl text-xs text-rose-200 space-y-2">
+              <p className="font-semibold text-rose-300">
+                {confirmBulkDelete.type === 'all'
+                  ? tr(
+                      `هل أنت متأكد من رغبتك في حذف جميع المنتجات (${confirmBulkDelete.count}) نهائياً من قاعدة البيانات؟`,
+                      `Êtes-vous sûr de vouloir supprimer définitivement TOUS les ${confirmBulkDelete.count} produits de la base de données ?`
+                    )
+                  : tr(
+                      `هل أنت متأكد من حذف ${confirmBulkDelete.count} منتج(ـات) محددة نهائياً من قاعدة البيانات؟`,
+                      `Êtes-vous sûr de vouloir supprimer définitivement ${confirmBulkDelete.count} produit(s) sélectionné(s) ?`
+                    )}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                {tr(
+                  'سيتم حذف الصفوف المحددة والصور المرتبطة بها مباشرة من قاعدة البيانات والتخزين.',
+                  'Les lignes sélectionnées et leurs images seront immédiatement supprimées de la base de données.'
+                )}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmBulkDelete(null)}
+                disabled={isBulkDeleting}
+                className="px-4 py-2 text-xs font-semibold text-slate-300 hover:text-slate-100 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                {tr('إلغاء', 'Annuler')}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBulkDelete}
+                disabled={isBulkDeleting}
+                className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 text-xs font-bold rounded-lg transition-colors disabled:opacity-50 shadow-lg shadow-rose-950/50"
+              >
+                {isBulkDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {confirmBulkDelete.type === 'all'
+                  ? tr('حذف الكل نهائياً', 'Tout Supprimer Définitivement')
+                  : tr(`حذف (${confirmBulkDelete.count}) نهائياً`, `Supprimer (${confirmBulkDelete.count}) Définitivement`)}
               </button>
             </div>
           </div>
