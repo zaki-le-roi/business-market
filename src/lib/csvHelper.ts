@@ -168,7 +168,7 @@ export function generateUniqueSlug(baseText: string, usedSlugs: Set<string>): st
 
 export async function importProductsFromCSV(
   file: File,
-  options?: { updateBySku?: boolean; skipDuplicates?: boolean; autoCreateCategory?: boolean },
+  options?: { updateBySku?: boolean; skipDuplicates?: boolean; autoCreateCategory?: boolean; selectedCategoryId?: string },
   onProgress?: (pct: number) => void
 ): Promise<ImportProductsResult> {
   let insertedCount = 0;
@@ -231,7 +231,9 @@ export async function importProductsFromCSV(
       }
 
       let category_id: string | null = null;
-      if (catSlug) {
+      if (options?.selectedCategoryId) {
+        category_id = options.selectedCategoryId;
+      } else if (catSlug) {
         if (catMap.has(catSlug.toLowerCase())) {
           category_id = catMap.get(catSlug.toLowerCase())!;
         } else if (options?.autoCreateCategory !== false) {

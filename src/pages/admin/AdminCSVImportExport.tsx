@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Upload, Download, FileText, CheckCircle2, AlertTriangle, XCircle,
   Package, ShoppingBag, Users, FolderTree, Database, CreditCard,
@@ -6,6 +6,8 @@ import {
   FileSpreadsheet, FileCode
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { supabase } from '../../lib/supabase';
+import { Category } from '../../types';
 import {
   downloadCSVTemplate,
   downloadInventoryCSVTemplate,
@@ -42,10 +44,24 @@ export default function AdminCSVImportExport() {
   const [updateBySku, setUpdateBySku] = useState(true);
   const [skipDuplicates, setSkipDuplicates] = useState(false);
   const [autoCreateCategory, setAutoCreateCategory] = useState(true);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [importResult, setImportResult] = useState<ImportProductsResult | null>(null);
   const [exportingKey, setExportingKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data } = await supabase.from('categories').select('*').order('name_ar');
+        if (data) setCategories(data as Category[]);
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -83,7 +99,7 @@ export default function AdminCSVImportExport() {
       } else {
         res = await importProductsFromCSV(
           selectedFile,
-          { updateBySku, skipDuplicates, autoCreateCategory },
+          { updateBySku, skipDuplicates, autoCreateCategory, selectedCategoryId },
           (p) => setProgress(p)
         );
       }
@@ -432,6 +448,33 @@ export default function AdminCSVImportExport() {
                     {tr('إنشاء الفئات تلقائياً في حال عدم وجودها بنفس الاسم', 'Créer automatiquement les nouvelles catégories si introuvables')}
                   </span>
                 </label>
+
+                <div className="pt-3 border-t border-slate-800/80">
+                  <label className="block text-xs font-bold text-slate-200 mb-1.5 flex items-center gap-2">
+                    <FolderTree className="h-4 w-4 text-emerald-400" />
+                    {tr('تحديد الفئة المستهدفة لجميع المنتجات المستوردة (اختياري)', 'Sélectionner la catégorie cible pour tous les produits importés (Optionnel)')}
+                  </label>
+                  <select
+                    value={selectedCategoryId}
+                    onChange={(e) => setSelectedCategoryId(e.target.value)}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-200 focus:border-emerald-500 focus:outline-none transition cursor-pointer"
+                  >
+                    <option value="">
+                      {tr('-- التحديد التلقائي حسب ملف CSV --', '-- Automatique depuis le fichier CSV --')}
+                    </option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name_ar || cat.name_fr} {cat.name_fr && cat.name_ar && cat.name_fr !== cat.name_ar ? `(${cat.name_fr})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    {tr(
+                      'عند تحديد فئة معينة هنا، سيتم إسناد كافة المنتجات المستوردة من هذا الملف إلى هذه الفئة تلقائياً.',
+                      'Toutes les lignes de produits importées seront automatiquement liées à la catégorie sélectionnée ci-dessus.'
+                    )}
+                  </p>
+                </div>
               </div>
 
               {/* Progress Bar */}
