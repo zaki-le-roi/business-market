@@ -1,0 +1,8 @@
+{
+  "name": "Business Market",
+  "description": "نظام التجارة الإلكترونية للجزائر - Business Market E-Commerce System for Algeria",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
