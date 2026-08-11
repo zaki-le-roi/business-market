@@ -139,6 +139,33 @@ export function downloadInventoryCSVTemplate(): void {
   exportToCSV(templateData, 'inventory_import_template');
 }
 
+export function normalizeSlugBase(text: string): string {
+  if (!text) return 'product';
+  const cleaned = text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '');
+  return cleaned || 'product';
+}
+
+export function generateUniqueSlug(baseText: string, usedSlugs: Set<string>): string {
+  const base = normalizeSlugBase(baseText);
+  if (!usedSlugs.has(base.toLowerCase())) {
+    usedSlugs.add(base.toLowerCase());
+    return base;
+  }
+  let counter = 2;
+  while (true) {
+    const candidate = `${base}-${counter}`;
+    if (!usedSlugs.has(candidate.toLowerCase())) {
+      usedSlugs.add(candidate.toLowerCase());
+      return candidate;
+    }
+    counter++;
+  }
+}
+
 export async function importProductsFromCSV(
   file: File,
   options?: { updateBySku?: boolean; skipDuplicates?: boolean; autoCreateCategory?: boolean },
@@ -161,11 +188,24 @@ export async function importProductsFromCSV(
     const warehouses = await fetchWarehousesFromDB();
     const mainWh = warehouses.find((w) => w.is_main) || warehouses[0];
 
+    // Pre-fetch existing product slugs from DB to prevent collisions with existing products
+    const usedSlugs = new Set<string>();
+    const { data: dbProducts } = await supabase.from('products').select('slug');
+    if (dbProducts) {
+      dbProducts.forEach((p) => {
+        if (p.slug) usedSlugs.add(p.slug.toLowerCase().trim());
+      });
+    }
+
     // Pre-fetch categories for auto-creation
     const { data: catData } = await supabase.from('categories').select('id, slug, name_ar, name_fr');
     const catMap = new Map<string, string>();
+    const usedCatSlugs = new Set<string>();
     (catData || []).forEach((c) => {
-      catMap.set(c.slug.toLowerCase(), c.id);
+      if (c.slug) {
+        catMap.set(c.slug.toLowerCase(), c.id);
+        usedCatSlugs.add(c.slug.toLowerCase().trim());
+      }
       if (c.name_ar) catMap.set(c.name_ar.toLowerCase(), c.id);
       if (c.name_fr) catMap.set(c.name_fr.toLowerCase(), c.id);
     });
@@ -195,10 +235,10 @@ export async function importProductsFromCSV(
         if (catMap.has(catSlug.toLowerCase())) {
           category_id = catMap.get(catSlug.toLowerCase())!;
         } else if (options?.autoCreateCategory !== false) {
-          const newSlug = catSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `cat-${Date.now()}`;
+          const newCatSlug = generateUniqueSlug(catSlug, usedCatSlugs);
           const { data: newCat } = await supabase
             .from('categories')
-            .insert({ name_ar: catSlug, name_fr: catSlug, slug: newSlug, is_active: true })
+            .insert({ name_ar: catSlug, name_fr: catSlug, slug: newCatSlug, is_active: true })
             .select('id')
             .single();
           if (newCat?.id) {
@@ -211,7 +251,7 @@ export async function importProductsFromCSV(
       // Check existing SKU
       let existingId: string | null = null;
       if (sku) {
-        const { data: existing } = await supabase.from('products').select('id').eq('sku', sku).maybeSingle();
+        const { data: existing } = await supabase.from('products').select('id, slug').eq('sku', sku).maybeSingle();
         if (existing?.id) existingId = existing.id;
       }
 
@@ -254,13 +294,12 @@ export async function importProductsFromCSV(
         }
       }
 
-      // Generate slug
-      const slug = (name_fr || name_ar)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '') || `product-${Date.now()}-${idx}`;
+      // Generate unique slug checking DB + current batch
+      const rowSlug = (row['slug'] || row['الرابط'] || '').trim();
+      const baseForSlug = rowSlug || name_fr || name_ar || 'product';
+      const slug = generateUniqueSlug(baseForSlug, usedSlugs);
 
-      const { data: prodData, error: prodError } = await supabase
+      let { data: prodData, error: prodError } = await supabase
         .from('products')
         .insert({
           name_ar: name_ar || name_fr,
@@ -276,6 +315,30 @@ export async function importProductsFromCSV(
         })
         .select()
         .single();
+
+      // Safeguard: Retry with timestamped suffix if database still rejects due to duplicate slug
+      if (prodError && (prodError.message.includes('products_slug_key') || prodError.message.includes('duplicate key'))) {
+        const retrySlug = `${slug}-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+        usedSlugs.add(retrySlug.toLowerCase());
+        const retryRes = await supabase
+          .from('products')
+          .insert({
+            name_ar: name_ar || name_fr,
+            name_fr: name_fr || name_ar,
+            slug: retrySlug,
+            price,
+            cost_price,
+            sku: sku || undefined,
+            stock_quantity: stock_qty,
+            category_id,
+            is_active: true,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        prodData = retryRes.data;
+        prodError = retryRes.error;
+      }
 
       if (prodError) {
         errorCount++;
