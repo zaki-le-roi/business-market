@@ -1,0 +1,230 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-slate-100 font-sans tracking-normal selection:bg-primary-500/20 selection:text-primary-700 dark:selection:text-primary-300;
+  }
+
+  [dir='rtl'] {
+    @apply font-arabic;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-slate-700 rounded-full hover:bg-gray-400 dark:hover:bg-slate-600 transition-colors;
+  }
+}
+
+@layer components {
+  /* Unified Buttons System */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-slate-950 select-none shadow-sm;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs rounded-lg gap-1.5;
+  }
+
+  .btn-lg {
+    @apply px-5 py-2.5 text-base rounded-2xl gap-2.5;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-600 hover:bg-primary-700 text-white shadow-sm shadow-primary-600/20 dark:shadow-none;
+  }
+
+  .btn-secondary {
+    @apply btn bg-slate-900 hover:bg-slate-800 text-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-800 dark:border-slate-700;
+  }
+
+  .btn-accent {
+    @apply btn bg-primary-500 hover:bg-primary-600 text-white shadow-sm;
+  }
+
+  .btn-outline {
+    @apply btn border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 hover:border-gray-400 dark:hover:border-slate-600;
+  }
+
+  .btn-ghost {
+    @apply btn text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800/80 hover:text-gray-900 dark:hover:text-slate-100 shadow-none;
+  }
+
+  .btn-danger {
+    @apply btn bg-error-600 hover:bg-error-700 text-white shadow-sm shadow-error-600/20 dark:shadow-none;
+  }
+
+  /* Unified Cards System */
+  .card {
+    @apply bg-white dark:bg-slate-900 rounded-2xl border border-gray-200/80 dark:border-slate-800 shadow-sm transition-shadow duration-200;
+  }
+
+  .card-hover {
+    @apply card hover:shadow-md hover:border-gray-300 dark:hover:border-slate-700;
+  }
+
+  /* Unified Input Controls System */
+  .input {
+    @apply w-full px-3.5 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-800 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 disabled:bg-gray-50 dark:disabled:bg-slate-950 disabled:cursor-not-allowed;
+  }
+
+  .input-sm {
+    @apply px-3 py-1.5 text-xs rounded-lg;
+  }
+
+  .label {
+    @apply block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider;
+  }
+
+  /* Unified Badges System */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide border;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary-50 dark:bg-primary-950/60 text-primary-700 dark:text-primary-300 border-primary-200 dark:border-primary-800/60;
+  }
+
+  .badge-success {
+    @apply badge bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60;
+  }
+
+  .badge-warning {
+    @apply badge bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60;
+  }
+
+  .badge-danger {
+    @apply badge bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/60;
+  }
+
+  .badge-info {
+    @apply badge bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800/60;
+  }
+
+  .badge-neutral {
+    @apply badge bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-700;
+  }
+
+  /* Enterprise Table Styling */
+  .table-responsive {
+    @apply w-full overflow-x-auto rounded-2xl border border-gray-200 dark:border-slate-800 max-w-full scrollbar-thin;
+  }
+
+  .table-enterprise {
+    @apply w-full text-xs text-start border-collapse;
+  }
+
+  .table-enterprise th {
+    @apply bg-gray-50 dark:bg-slate-900/90 text-gray-500 dark:text-slate-400 font-bold uppercase tracking-wider p-3.5 border-b border-gray-200 dark:border-slate-800 text-start whitespace-nowrap select-none;
+  }
+
+  .table-enterprise td {
+    @apply p-3.5 border-b border-gray-100 dark:border-slate-800/60 text-gray-700 dark:text-slate-300 align-middle transition-colors;
+  }
+
+  .table-enterprise tbody tr {
+    @apply hover:bg-gray-50/80 dark:hover:bg-slate-800/50 transition-colors;
+  }
+
+  /* Unified Modal / Dialog */
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in overflow-y-auto;
+  }
+
+  .modal-container {
+    @apply bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-5 animate-scale-in max-h-[90vh] overflow-y-auto scrollbar-thin my-auto;
+  }
+
+  .skeleton {
+    @apply bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 dark:from-slate-800 dark:via-slate-700 dark:to-slate-800 bg-[length:1000px_100%] animate-shimmer rounded-xl;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm 15mm 10mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Force hide interactive admin controls */
+  .print\:hidden,
+  header,
+  aside,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Force display of printable report */
+  .print\:block {
+    display: block !important;
+  }
+
+  /* Page break controls */
+  .print-break-inside-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-page-break-after {
+    page-break-after: always !important;
+    break-after: always !important;
+  }
+
+  /* Clean high contrast table borders for paper printing */
+  .print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 11px !important;
+  }
+
+  .print-table th,
+  .print-table td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 10px !important;
+    color: #0f172a !important;
+  }
+
+  .print-table th {
+    background-color: #f8fafc !important;
+    font-weight: 700 !important;
+  }
+}
+
