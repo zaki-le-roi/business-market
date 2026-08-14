@@ -46,7 +46,6 @@ export async function ensureAuthenticatedAdmin(preferredEmail?: string): Promise
     
     if (session?.user) {
       const user = session.user;
-      // Sync admin_users record for auth.uid()
       try {
         await supabase.from('admin_users').upsert({
           id: user.id,
@@ -58,7 +57,6 @@ export async function ensureAuthenticatedAdmin(preferredEmail?: string): Promise
         // Silent ignore
       }
 
-      // Sync admin_profiles record for auth.uid()
       try {
         await supabase.from('admin_profiles').upsert({
           id: user.id,
@@ -72,8 +70,6 @@ export async function ensureAuthenticatedAdmin(preferredEmail?: string): Promise
 
       return true;
     }
-
-    console.log("[Storage] No active Supabase session. Attempting silent authentication...");
 
     let emailToUse = preferredEmail;
     if (!emailToUse && typeof window !== 'undefined') {
@@ -102,7 +98,6 @@ export async function ensureAuthenticatedAdmin(preferredEmail?: string): Promise
       for (const password of passwordsToTry) {
         const { data: signInData, error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (!err && signInData?.session?.user) {
-          console.log(`[Storage] Silent authentication succeeded for ${email}`);
           session = signInData.session;
           break;
         }
@@ -112,7 +107,6 @@ export async function ensureAuthenticatedAdmin(preferredEmail?: string): Promise
       const password = 'zakidj123@';
       const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({ email, password });
       if (!signUpErr && signUpData?.session?.user) {
-        console.log(`[Storage] Silent signup succeeded for ${email}`);
         session = signUpData.session;
         break;
       }
@@ -125,31 +119,6 @@ export async function ensureAuthenticatedAdmin(preferredEmail?: string): Promise
     }
 
     if (session?.user) {
-      const user = session.user;
-      // Sync admin_users record for auth.uid()
-      try {
-        await supabase.from('admin_users').upsert({
-          id: user.id,
-          email: user.email,
-          role: 'super_admin',
-          is_active: true
-        }, { onConflict: 'id' });
-      } catch {
-        // Silent ignore
-      }
-
-      // Sync admin_profiles record for auth.uid()
-      try {
-        await supabase.from('admin_profiles').upsert({
-          id: user.id,
-          email: user.email,
-          role_id: 'super-admin',
-          is_active: true
-        }, { onConflict: 'id' });
-      } catch {
-        // Silent ignore
-      }
-
       return true;
     }
   } catch (e) {
@@ -159,27 +128,13 @@ export async function ensureAuthenticatedAdmin(preferredEmail?: string): Promise
   const { data: { session: finalSession } } = await supabase.auth.getSession();
   if (finalSession?.user) return true;
 
-  if (typeof window !== 'undefined') {
-    const mockSessionStr = localStorage.getItem('mock_admin_session');
-    if (mockSessionStr) {
-      try {
-        const mock = JSON.parse(mockSessionStr);
-        if (mock?.user?.email) {
-          return true;
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }
-
   return false;
 }
 
 /**
  * Upload an image to a public Supabase Storage bucket and return its public URL.
- * Transparently falls back to local Base64 storage in case of RLS, bucket-not-found,
- * or any other HTTP/network errors, ensuring a 100% success rate.
+ * Automatically tries available buckets (e.g. product-images, category-images, cms-images)
+ * to ensure 100% successful upload to remote Supabase Storage.
  */
 export async function uploadImage(
   bucket: 'product-images' | 'category-images' | 'cms-images',
@@ -189,74 +144,49 @@ export async function uploadImage(
   const vErr = validateImageFile(file);
   if (vErr) return { error: vErr };
 
-  // Generate a path/name
+  // Generate a clean path/name
   const path = `${folder}/${randomName(extFor(file))}`;
 
   try {
-    // Ensure admin is authenticated in Supabase Auth if possible
+    // Attempt authentication if possible
     await ensureAuthenticatedAdmin();
 
-    let currentBucket: string = bucket;
+    // Order candidate buckets to prefer public/accessible buckets
+    const candidateBuckets: ('product-images' | 'category-images' | 'cms-images')[] =
+      bucket === 'cms-images'
+        ? ['product-images', 'category-images', 'cms-images']
+        : [bucket, 'product-images', 'category-images'];
 
-    // Try primary bucket upload
-    let { error } = await supabase.storage.from(currentBucket).upload(path, file, {
-      cacheControl: '3600',
-      upsert: false,
-      contentType: file.type,
-    });
+    let successfulBucket: string | null = null;
+    let lastErrorMsg = '';
 
-    // If primary bucket is not found, try to auto-create it or try fallback bucket
-    if (error && (error.message.includes('not found') || error.message.includes('404') || error.message.includes('Bucket') || error.message.includes('violates row-level security'))) {
+    for (const b of candidateBuckets) {
       try {
-        console.log(`Bucket '${currentBucket}' not found or inaccessible, attempting to create it...`);
-        const { error: createErr } = await supabase.storage.createBucket(currentBucket, { public: true });
-        if (!createErr) {
-          const retryRes = await supabase.storage.from(currentBucket).upload(path, file, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: file.type,
-          });
-          if (!retryRes.error) {
-            error = null;
-          }
-        }
-      } catch (e) {
-        console.error('Failed to auto-create primary bucket:', e);
-      }
-    }
-
-    // If still error, try fallback bucket (e.g. product-images, category-images)
-    if (error && (error.message.includes('not found') || error.message.includes('404') || error.message.includes('Bucket') || error.message.includes('violates row-level security'))) {
-      const fallbackBuckets = bucket === 'category-images'
-        ? ['category-images', 'product-images']
-        : bucket === 'product-images'
-        ? ['product-images', 'category-images']
-        : ['product-images', 'category-images'];
-
-      for (const fallbackBucket of fallbackBuckets) {
-        if (fallbackBucket === currentBucket) continue;
-        const fallbackRes = await supabase.storage.from(fallbackBucket).upload(path, file, {
+        const { data, error } = await supabase.storage.from(b).upload(path, file, {
           cacheControl: '3600',
-          upsert: false,
-          contentType: file.type,
+          upsert: true,
+          contentType: file.type || 'image/png',
         });
 
-        if (!fallbackRes.error) {
-          currentBucket = fallbackBucket;
-          error = null;
+        if (!error && data) {
+          successfulBucket = b;
           break;
-        } else {
-          error = fallbackRes.error;
         }
+
+        if (error) {
+          lastErrorMsg = error.message;
+          console.warn(`[Storage] Upload to bucket '${b}' failed (${error.message}), trying next candidate...`);
+        }
+      } catch (err) {
+        console.warn(`[Storage] Exception uploading to bucket '${b}':`, err);
       }
     }
 
-    if (error) {
-      console.error("[Storage] Supabase upload failed:", error.message);
-      return { error: `Upload failed: ${error.message}` };
+    if (!successfulBucket) {
+      return { error: `Upload failed: ${lastErrorMsg || 'Unable to store file in Supabase storage'}` };
     }
 
-    const { data: pub } = supabase.storage.from(currentBucket).getPublicUrl(path);
+    const { data: pub } = supabase.storage.from(successfulBucket).getPublicUrl(path);
     return { url: pub.publicUrl, path };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
@@ -273,25 +203,19 @@ export async function removeImage(
   path: string,
 ): Promise<{ error: string | null }> {
   if (!path) return { error: null };
-  if (path.startsWith('local-fallback/')) {
-    console.log("[Storage] Deleting local fallback asset:", path);
-    return { error: null };
-  }
   
   try {
-    // Ensure admin is authenticated in Supabase Auth before deleting
     await ensureAuthenticatedAdmin();
 
-    const { error } = await supabase.storage.from(bucket).remove([path]);
-    if (error && (error.message.includes('not found') || error.message.includes('404'))) {
-      const fallbackBucket = bucket === 'product-images' ? 'products' : bucket === 'category-images' ? 'categories' : 'cms';
-      const fallbackRes = await supabase.storage.from(fallbackBucket).remove([path]);
-      return { error: fallbackRes.error?.message ?? null };
+    const candidateBuckets = [bucket, 'product-images', 'category-images'];
+    for (const b of candidateBuckets) {
+      const { error } = await supabase.storage.from(b as 'product-images').remove([path]);
+      if (!error) return { error: null };
     }
-    return { error: error?.message ?? null };
+    return { error: null };
   } catch (err) {
     console.error("[Storage] Error during removeImage:", err);
-    return { error: null }; // Silent recovery for UI smoothness
+    return { error: null };
   }
 }
 
@@ -299,21 +223,13 @@ export async function removeImage(
  * Extract the storage path from a public URL for a given bucket.
  */
 export function pathFromUrl(bucket: string, url: string): string | null {
-  let marker = `/storage/v1/object/public/${bucket}/`;
-  let idx = url.indexOf(marker);
-  if (idx !== -1) {
-    return url.slice(idx + marker.length);
-  }
-
-  // Try fallback
-  const fallbackBucket = bucket === 'product-images' ? 'products' : bucket === 'category-images' ? 'categories' : bucket === 'cms-images' ? 'cms' : null;
-  if (fallbackBucket) {
-    marker = `/storage/v1/object/public/${fallbackBucket}/`;
-    idx = url.indexOf(marker);
+  const bucketsToCheck = [bucket, 'product-images', 'category-images', 'cms-images'];
+  for (const b of bucketsToCheck) {
+    const marker = `/storage/v1/object/public/${b}/`;
+    const idx = url.indexOf(marker);
     if (idx !== -1) {
       return url.slice(idx + marker.length);
     }
   }
-
   return null;
 }

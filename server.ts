@@ -1,12 +1,21 @@
 import express from 'express';
+import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
 import { createServer as createViteServer } from 'vite';
+import { createClient } from '@supabase/supabase-js';
 import shippingRouter from './src/server/shippingApi';
 import metaCommerceRouter from './src/server/metaCommerceApi';
 
 const app = express();
 const PORT = 3000;
+
+// Initialize Supabase for server-side persistence
+const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://dyhpfgjogdiongmcmoti.supabase.co';
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_-IPbcqQsh8YXpNZPqa9AMg_YIudLt4a';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const SETTINGS_FILE = path.join(process.cwd(), 'data', 'system_settings.json');
 
 // Set up memory storage for uploaded files
 const storage = multer.memoryStorage();
@@ -19,6 +28,91 @@ const upload = multer({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Mount System Settings API routes
+app.get('/api/system-settings', async (req, res) => {
+  try {
+    let settings: Record<string, unknown> = {};
+    if (fs.existsSync(SETTINGS_FILE)) {
+      try {
+        settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+      } catch (e) {
+        console.warn('[Server] Error reading local settings file:', e);
+      }
+    }
+    try {
+      const { data } = await supabase.from('system_settings').select('key, value');
+      if (data && data.length > 0) {
+        data.forEach(item => {
+          if (item.key === 'full_config' && item.value && typeof item.value === 'object') {
+            settings = { ...settings, ...(item.value as Record<string, unknown>) };
+          } else if (item.key === 'store_logo' && typeof item.value === 'string' && item.value) {
+            settings.store_logo = item.value;
+          } else if (item.key === 'store_favicon' && typeof item.value === 'string' && item.value) {
+            settings.store_favicon = item.value;
+          } else if (item.key === 'app_icon' && typeof item.value === 'string' && item.value) {
+            settings.app_icon = item.value;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[Server] Error fetching Supabase settings:', e);
+    }
+    return res.json({ success: true, settings });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return res.status(500).json({ success: false, error: msg });
+  }
+});
+
+app.post('/api/system-settings', async (req, res) => {
+  try {
+    const settings = req.body;
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({ success: false, message: 'Invalid payload' });
+    }
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    let current: Record<string, unknown> = {};
+    if (fs.existsSync(SETTINGS_FILE)) {
+      try {
+        current = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+      } catch (e) {
+        console.warn('[Server] Error reading local settings for merge:', e);
+      }
+    }
+    const merged = { ...current, ...settings };
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(merged, null, 2), 'utf-8');
+
+    // Also persist into Supabase system_settings
+    try {
+      const rows = [
+        { key: 'full_config', value: merged },
+        { key: 'store_logo', value: merged.store_logo || '' },
+        { key: 'store_favicon', value: merged.store_favicon || '' },
+        { key: 'app_icon', value: merged.app_icon || '' },
+        { key: 'custom_logo_url', value: { value: merged.store_logo || '' } },
+        { key: 'website_logo_url', value: { value: merged.store_logo || '' } },
+      ];
+      for (const r of rows) {
+        await supabase.from('system_settings').upsert({
+          key: r.key,
+          value: r.value,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+      }
+    } catch (e) {
+      console.warn('[Server] Supabase settings write warning:', e);
+    }
+
+    return res.json({ success: true, settings: merged });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return res.status(500).json({ success: false, error: msg });
+  }
+});
 
 // Mount Module 5 Shipping & Logistics API router
 app.use('/api/shipping', shippingRouter);

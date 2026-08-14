@@ -879,7 +879,7 @@ export default function AdminSystem() {
                   {isAr ? 'شعار المتجر الرسمي (Logo)' : 'Official Store Logo'}
                 </label>
                 <ImageUploader
-                  bucket="cms-images"
+                  bucket="product-images"
                   folder="store-logo"
                   images={
                     typeof settings.store_logo === 'string' && settings.store_logo
@@ -903,7 +903,7 @@ export default function AdminSystem() {
                   {isAr ? 'أيقونة المتجر المميزة (Favicon)' : 'Store Favicon'}
                 </label>
                 <ImageUploader
-                  bucket="cms-images"
+                  bucket="product-images"
                   folder="store-favicon"
                   images={
                     typeof settings.store_favicon === 'string' && settings.store_favicon
@@ -927,7 +927,7 @@ export default function AdminSystem() {
                   {isAr ? 'أيقونة تطبيق أندرويد (Android App Icon)' : 'Android App Launcher Icon'}
                 </label>
                 <ImageUploader
-                  bucket="cms-images"
+                  bucket="product-images"
                   folder="app-icon"
                   images={
                     typeof settings.app_icon === 'string' && settings.app_icon

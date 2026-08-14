@@ -1,0 +1,335 @@
+{
+  "store_logo": "https://dyhpfgjogdiongmcmoti.supabase.co/storage/v1/object/public/product-images/store-logo/1786729424379-m7c6imqq.png",
+  "store_favicon": "https://dyhpfgjogdiongmcmoti.supabase.co/storage/v1/object/public/product-images/store-logo/logo-verification-1786728939105.png",
+  "app_icon": "https://dyhpfgjogdiongmcmoti.supabase.co/storage/v1/object/public/product-images/store-logo/logo-verification-1786728939105.png",
+  "store_name_ar": "متجر بيزنس ماركت",
+  "store_name_fr": "Business Market",
+  "store_name_en": "Business Market",
+  "store_description_ar": "المتجر الإلكتروني المطور للتجارة والجملة في الجزائر",
+  "store_description_fr": "La première plateforme e-commerce et vente en gros en Algérie",
+  "store_description_en": "The premier e-commerce & wholesale platform in Algeria",
+  "store_email": "contact@businessmarket.dz",
+  "store_phone": "+213 550 12 34 56",
+  "store_whatsapp": "+213 661 98 76 54",
+  "store_address_ar": "العلمة",
+  "store_address_fr": "El eulma",
+  "store_address_en": "El eulma",
+  "default_language": "ar",
+  "supported_languages": [
+    "ar",
+    "fr",
+    "en"
+  ],
+  "default_currency": "DZD",
+  "currency_symbol": "د.ج",
+  "currency_position": "after",
+  "default_timezone": "Africa/Algiers",
+  "date_format": "DD/MM/YYYY",
+  "rtl_support": true,
+  "homepage_layout": "standard",
+  "featured_sections": {
+    "brands_grid": true,
+    "flash_deals": true,
+    "hero_slider": true,
+    "best_sellers": true,
+    "testimonials": true,
+    "custom_banners": true,
+    "top_categories": true
+  },
+  "hero_autoplay_interval_ms": 5000,
+  "hero_overlay_gradient": true,
+  "featured_products_count": 8,
+  "maintenance_mode": false,
+  "maintenance_message_ar": "الموقع حالياً قيد الصيانة والتطوير. سنعود قريباً!",
+  "maintenance_message_fr": "Le site est actuellement en maintenance. Nous serons de retour très bientôt !",
+  "maintenance_message_en": "The site is currently undergoing scheduled maintenance. We will be back soon!",
+  "estimated_return_time": "2026-07-28T18:00:00Z",
+  "admin_bypass": true,
+  "smtp_host": "smtp.mailtrap.io",
+  "smtp_port": 587,
+  "smtp_security": "tls",
+  "smtp_user": "store_smtp_user",
+  "smtp_pass": "••••••••••••",
+  "smtp_from_email": "noreply@businessmarket.dz",
+  "smtp_from_name": "Business Market Algeria",
+  "launcher_icon_url": "",
+  "otp_expiry_minutes": 5,
+  "abandoned_cart_hours": 24,
+  "fraud_detection_enabled": true,
+  "cod_enabled": true,
+  "online_payment_enabled": true,
+  "currency": "DZD",
+  "free_shipping_threshold": "0",
+  "ai_chatbot_enabled": false,
+  "max_otp_attempts": "3",
+  "rate_limit_per_minute": "60",
+  "flash_sale_active": true,
+  "reviews_enabled": true,
+  "communes_by_wilaya": {
+    "19": [
+      {
+        "id": "6dob31w0j",
+        "daira": "el eulma",
+        "name_ar": "العلمة",
+        "name_fr": "el eulma"
+      }
+    ]
+  },
+  "security_config": {
+    "ip_lock_enabled": false,
+    "require_numbers": true,
+    "require_symbols": true,
+    "api_cors_origins": "https://businessmarket.dz, https://admin.businessmarket.dz",
+    "require_lowercase": true,
+    "require_uppercase": true,
+    "two_factor_policy": "all_users",
+    "max_login_attempts": 5,
+    "min_password_length": 16,
+    "prevent_reuse_count": 5,
+    "jwt_expiration_hours": 168,
+    "auto_ip_ban_threshold": 10,
+    "rate_limit_per_minute": 60,
+    "logout_on_browser_close": true,
+    "session_timeout_minutes": 45,
+    "lockout_duration_minutes": 30,
+    "password_expiration_days": 90,
+    "api_rate_limiting_enabled": true,
+    "backup_encryption_enabled": true,
+    "max_simultaneous_sessions": 3
+  },
+  "wholesale_store_data_v1": {
+    "groups": [
+      {
+        "id": "group-vip-1",
+        "name_ar": "تجار الجملة الممتازين (VIP)",
+        "name_fr": "Grossistes VIP",
+        "created_at": "2026-07-22T22:25:01.711Z",
+        "discount_percentage": 15
+      },
+      {
+        "id": "group-std-2",
+        "name_ar": "تجار الجملة العاديين",
+        "name_fr": "Grossistes Standard",
+        "created_at": "2026-07-22T22:25:01.711Z",
+        "discount_percentage": 10
+      },
+      {
+        "id": "group-dist-3",
+        "name_ar": "الموزعين الاقليميين",
+        "name_fr": "Distributeurs Régionaux",
+        "created_at": "2026-07-22T22:25:01.711Z",
+        "discount_percentage": 20
+      }
+    ],
+    "invoices": [
+      {
+        "id": "inv-1784759227052",
+        "status": "paid",
+        "due_date": "2026-08-21T22:27:07.052Z",
+        "order_id": "po-1784759219652",
+        "created_at": "2026-07-22T22:27:07.052Z",
+        "customer_id": "90b061af-8592-4754-b392-5e92cd3d7723",
+        "total_amount": 321,
+        "invoice_number": "INV-477785"
+      }
+    ],
+    "settings": {
+      "auto_approve_po": false,
+      "min_order_amount": 50000,
+      "credit_limit_default": 100000,
+      "wholesale_terms_notes": "1. Le paiement doit être effectué dans le délai convenu.\n2. Tout retard entraînera la suspension du compte crédit.",
+      "default_payment_terms_days": 30
+    },
+    "overrides": [],
+    "price_lists": [],
+    "payment_terms": [
+      {
+        "id": "pt-15",
+        "days": 15,
+        "label": "سداد خلال 15 يوم",
+        "is_active": true,
+        "created_at": "2026-07-22T22:25:01.711Z"
+      },
+      {
+        "id": "pt-30",
+        "days": 30,
+        "label": "سداد خلال 30 يوم (افتراضي)",
+        "is_active": true,
+        "created_at": "2026-07-22T22:25:01.711Z"
+      },
+      {
+        "id": "pt-60",
+        "days": 60,
+        "label": "سداد خلال 60 يوم",
+        "is_active": true,
+        "created_at": "2026-07-22T22:25:01.711Z"
+      }
+    ],
+    "price_entries": [],
+    "purchase_orders": [
+      {
+        "id": "po-1784759219652",
+        "notes": "",
+        "status": "approved",
+        "po_number": "PO-148562",
+        "created_at": "2026-07-22T22:26:59.652Z",
+        "customer_id": "90b061af-8592-4754-b392-5e92cd3d7723",
+        "total_amount": 321,
+        "payment_terms_id": "pt-30"
+      }
+    ],
+    "customer_credits": [
+      {
+        "customer_id": "90b061af-8592-4754-b392-5e92cd3d7723",
+        "account_type": "wholesale",
+        "company_name": "",
+        "credit_limit": 100000,
+        "credit_balance": 99679,
+        "wholesale_status": "approved",
+        "customer_group_id": ""
+      },
+      {
+        "customer_id": "3ddabe8e-1aaf-4959-81cb-4137fb0086cc",
+        "account_type": "wholesale",
+        "company_name": "",
+        "credit_limit": 100000,
+        "credit_balance": 100000,
+        "wholesale_status": "approved",
+        "customer_group_id": ""
+      },
+      {
+        "customer_id": "f1cc21b2-c06f-4677-adff-73dcd95234b5",
+        "account_type": "wholesale",
+        "company_name": "",
+        "credit_limit": 100000,
+        "credit_balance": 100000,
+        "wholesale_status": "approved",
+        "customer_group_id": ""
+      },
+      {
+        "customer_id": "f6e54f65-c64c-4151-b9fe-d68a48371cab",
+        "account_type": "wholesale",
+        "company_name": "",
+        "credit_limit": 100000,
+        "credit_balance": 100000,
+        "wholesale_status": "approved",
+        "customer_group_id": ""
+      },
+      {
+        "customer_id": "21562645-ca2d-4842-9c28-008369556fbd",
+        "account_type": "wholesale",
+        "company_name": "",
+        "credit_limit": 100000,
+        "credit_balance": 100000,
+        "wholesale_status": "approved",
+        "customer_group_id": ""
+      },
+      {
+        "customer_id": "e85be99e-c9e2-4211-ab8b-1b25e2c15115",
+        "account_type": "wholesale",
+        "company_name": "",
+        "credit_limit": 100000,
+        "credit_balance": 100000,
+        "wholesale_status": "approved",
+        "customer_group_id": ""
+      },
+      {
+        "customer_id": "2fd27aab-d768-4de3-8c44-227a2ed9db77",
+        "account_type": "wholesale",
+        "company_name": "",
+        "credit_limit": 100000,
+        "credit_balance": 100000,
+        "wholesale_status": "approved",
+        "customer_group_id": ""
+      },
+      {
+        "customer_id": "6f377137-758b-4fc1-99bd-694827d3c242",
+        "account_type": "wholesale",
+        "company_name": "",
+        "credit_limit": 100000,
+        "credit_balance": 100000,
+        "wholesale_status": "approved",
+        "customer_group_id": ""
+      },
+      {
+        "customer_id": "35b6f012-a8df-4d68-9bbb-4931f747e548",
+        "account_type": "wholesale",
+        "company_name": "",
+        "credit_limit": 100000,
+        "credit_balance": 100000,
+        "wholesale_status": "approved",
+        "customer_group_id": ""
+      },
+      {
+        "customer_id": "50f5b1e7-0cd8-4bbd-9e28-c9f89b923915",
+        "account_type": "wholesale",
+        "company_name": "",
+        "credit_limit": 100000,
+        "credit_balance": 100000,
+        "wholesale_status": "approved",
+        "customer_group_id": ""
+      },
+      {
+        "customer_id": "1255f6a6-b56b-4027-8024-7efac8e422af",
+        "account_type": "wholesale",
+        "company_name": "",
+        "credit_limit": 100000,
+        "credit_balance": 100000,
+        "wholesale_status": "approved",
+        "customer_group_id": ""
+      },
+      {
+        "customer_id": "8013e05b-7ddc-4dd4-9f78-d59a8e31e600",
+        "account_type": "wholesale",
+        "company_name": "",
+        "credit_limit": 100000,
+        "credit_balance": 100000,
+        "wholesale_status": "approved",
+        "customer_group_id": ""
+      },
+      {
+        "customer_id": "3bddd9ce-fe6a-4b50-b4fc-c0f257b0919f",
+        "account_type": "wholesale",
+        "credit_limit": 250000,
+        "credit_balance": 180000,
+        "wholesale_status": "approved",
+        "customer_group_id": "test-group-1784760343289"
+      }
+    ]
+  },
+  "wholesale_groups_data": {
+    "groups": [
+      {
+        "id": "test-1",
+        "name_ar": "اختبار",
+        "name_fr": "Test",
+        "discount_percentage": 10
+      }
+    ]
+  },
+  "test_shipping_rates": "{\"16\":{\"home\":600,\"desk\":400}}",
+  "app_update_config": {
+    "enabled": true,
+    "history": [
+      {
+        "notes_ar": "• تحسين سرعة التطبيق وتأكيد الطلبات\n• إصلاح مشكلة إتمام الملف الشخصي\n• تحديث واجهات لوحة التحكم للمشرفين",
+        "notes_fr": "• Amélioration des performances de l'application\n• Correction de bugs sur la complétion de profil\n• Mise à jour de l'interface d'administration",
+        "update_url": "https://github.com/zaki-le-roi/business-market-releases/releases/download/vv1.0.3/Business-Market.2.apk",
+        "release_date": "2026-07-23T20:08:47.486Z",
+        "version_code": 105,
+        "version_name": "v1.0.4"
+      }
+    ],
+    "notes_ar": "• تحسين سرعة التطبيق وتأكيد الطلبات\n• إصلاح مشكلة إتمام الملف الشخصي\n• تحديث واجهات لوحة التحكم للمشرفين",
+    "notes_fr": "• Amélioration des performances de l'application\n• Correction de bugs sur la complétion de profil\n• Mise à jour de l'interface d'administration",
+    "update_url": "https://github.com/zaki-le-roi/business-market-releases/releases/download/vv1.0.3/Business-Market.2.apk",
+    "github_repo": "business-market-releases",
+    "github_owner": "zaki-le-roi",
+    "is_mandatory": true,
+    "latest_version_code": 105,
+    "latest_version_name": "v1.0.4"
+  },
+  "meta_social_commerce_config": {
+    "appSecret": "prod_sec_meta_app_secret_88888"
+  }
+}

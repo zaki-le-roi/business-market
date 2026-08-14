@@ -165,7 +165,20 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     }
   }
 
-  // 1. Try reading from relational store_settings table first
+  // 1. Try reading from server /api/system-settings endpoint if available
+  try {
+    const res = await fetch('/api/system-settings');
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && json.settings && typeof json.settings === 'object') {
+        baseSettings = { ...baseSettings, ...json.settings };
+      }
+    }
+  } catch {
+    // Non-blocking
+  }
+
+  // 2. Try reading from relational store_settings table
   try {
     const { data: storeRow } = await supabase.from('store_settings').select('*').eq('id', 1).maybeSingle();
     if (storeRow) {
@@ -187,12 +200,13 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     // Non-blocking
   }
 
+  // 3. Read from Supabase system_settings table
   try {
     const { data, error } = await supabase.from('system_settings').select('key, value');
     if (!error && data && data.length > 0) {
       const dbObj: Record<string, unknown> = {};
 
-      // 1. Process full_config first
+      // Process full_config first
       const fullConfigRow = data.find(item => item.key === 'full_config');
       if (fullConfigRow && typeof fullConfigRow.value === 'object' && fullConfigRow.value !== null) {
         const fullConfig = fullConfigRow.value as Record<string, unknown>;
@@ -204,9 +218,15 @@ export async function getSystemSettings(): Promise<SystemSettings> {
         } else if (typeof fullConfig.launcher_icon_url === 'string' && fullConfig.launcher_icon_url && !dbObj.app_icon) {
           dbObj.app_icon = fullConfig.launcher_icon_url;
         }
+        if (typeof fullConfig.store_logo === 'string' && fullConfig.store_logo) {
+          dbObj.store_logo = fullConfig.store_logo;
+        }
+        if (typeof fullConfig.store_favicon === 'string' && fullConfig.store_favicon) {
+          dbObj.store_favicon = fullConfig.store_favicon;
+        }
       }
 
-      // 2. Process individual rows
+      // Process individual rows
       data.forEach(item => {
         if (item.key !== 'full_config') {
           const unwrapped = unwrapSettingValue(item.value);
@@ -215,9 +235,13 @@ export async function getSystemSettings(): Promise<SystemSettings> {
             if (sn.ar) dbObj.store_name_ar = sn.ar;
             if (sn.fr) dbObj.store_name_fr = sn.fr;
             if (sn.en) dbObj.store_name_en = sn.en;
-          } else if (item.key === 'custom_logo_url' || item.key === 'website_logo_url') {
+          } else if (item.key === 'custom_logo_url' || item.key === 'website_logo_url' || item.key === 'store_logo') {
             if (typeof unwrapped === 'string' && unwrapped) {
               dbObj.store_logo = unwrapped;
+            }
+          } else if (item.key === 'store_favicon') {
+            if (typeof unwrapped === 'string' && unwrapped) {
+              dbObj.store_favicon = unwrapped;
             }
           } else if (item.key === 'launcher_icon_url') {
             if (typeof unwrapped === 'string' && unwrapped && !dbObj.app_icon) {
@@ -256,6 +280,11 @@ export async function getSystemSettings(): Promise<SystemSettings> {
           ? ((merged.store_logo as Record<string, unknown>).value as string)
           : DEFAULT_SYSTEM_SETTINGS.store_logo;
       }
+      if (typeof merged.store_favicon !== 'string') {
+        merged.store_favicon = typeof (merged.store_favicon as Record<string, unknown>)?.value === 'string'
+          ? ((merged.store_favicon as Record<string, unknown>).value as string)
+          : DEFAULT_SYSTEM_SETTINGS.store_favicon;
+      }
 
       merged.maintenance_mode = false;
 
@@ -272,7 +301,7 @@ export async function getSystemSettings(): Promise<SystemSettings> {
 }
 
 /**
- * Save updated system settings to Supabase and LocalStorage
+ * Save updated system settings to Supabase and server
  */
 export async function saveSystemSettings(settings: SystemSettings): Promise<boolean> {
   const cleanSettings: SystemSettings = { ...settings };
@@ -282,6 +311,17 @@ export async function saveSystemSettings(settings: SystemSettings): Promise<bool
 
   if (typeof window !== 'undefined') {
     localStorage.setItem(LOCAL_STORAGE_SETTINGS_KEY, JSON.stringify(cleanSettings));
+  }
+
+  // 1. Save via server-side API endpoint if accessible
+  try {
+    await fetch('/api/system-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cleanSettings)
+    });
+  } catch {
+    // Non-blocking
   }
 
   try {
@@ -417,7 +457,7 @@ export async function saveSystemSettings(settings: SystemSettings): Promise<bool
       }
     }
 
-    // Also update relational store_settings table
+    // Also update relational store_settings table if present
     try {
       await supabase.from('store_settings').upsert({
         id: 1,
