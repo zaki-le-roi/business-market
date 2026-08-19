@@ -138,28 +138,26 @@ export default function AdminCategories() {
     try {
       setLoading(true);
       setError(null);
-      const [{ data: cats }, { data: prods }] = await Promise.all([
+      // Load Data from Supabase
+      const [{ data: cats, error: catsErr }, { data: prods }] = await Promise.all([
         supabase.from('categories').select('*').order('sort_order').order('name_fr'),
         supabase.from('products').select('category_id'),
       ]);
 
-      let loadedCats = (cats || []) as Category[];
-      const localSaved = localStorage.getItem('local_admin_categories') || localStorage.getItem('categories');
-      if (localSaved) {
-        try {
-          const parsed: Category[] = JSON.parse(localSaved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const map = new Map<string, Category>();
-            loadedCats.forEach(c => map.set(c.id, c));
-            parsed.forEach((c: Category) => {
-              if (c && c.id) {
-                map.set(c.id, { ...(map.get(c.id) || {}), ...c });
-              }
-            });
-            loadedCats = Array.from(map.values());
+      let loadedCats: Category[] = [];
+      if (!catsErr && Array.isArray(cats)) {
+        loadedCats = cats as Category[];
+      } else {
+        const localSaved = localStorage.getItem('local_admin_categories') || localStorage.getItem('categories');
+        if (localSaved) {
+          try {
+            const parsed: Category[] = JSON.parse(localSaved);
+            if (Array.isArray(parsed)) {
+              loadedCats = parsed;
+            }
+          } catch {
+            // fallback
           }
-        } catch {
-          // fallback
         }
       }
 
@@ -326,6 +324,12 @@ export default function AdminCategories() {
       }
     } else {
       showToast(tr('تم حذف الفئة بنجاح.', 'Catégorie supprimée avec succès.'), 'success');
+      const updatedList = categories.filter((c) => c.id !== cat.id);
+      setCategories(updatedList);
+      localStorage.setItem('local_admin_categories', JSON.stringify(updatedList));
+      localStorage.setItem('categories', JSON.stringify(updatedList));
+      window.dispatchEvent(new Event('categories_updated'));
+      window.dispatchEvent(new Event('storage'));
     }
 
     setConfirmDel(null);
@@ -393,6 +397,12 @@ export default function AdminCategories() {
         showToast(tr('تم تعطيل بعض الفئات بدلاً من حذفها لاحتوائها على منتجات.', 'Catégories désactivées car elles contiennent des produits.'), 'success');
       } else {
         showToast(tr('تم حذف الفئات المحددة بنجاح.', 'Catégories supprimées.'), 'success');
+        const remaining = categories.filter((c) => !selectedIds.includes(c.id));
+        setCategories(remaining);
+        localStorage.setItem('local_admin_categories', JSON.stringify(remaining));
+        localStorage.setItem('categories', JSON.stringify(remaining));
+        window.dispatchEvent(new Event('categories_updated'));
+        window.dispatchEvent(new Event('storage'));
       }
       setSelectedCatIds({});
       setShowBulkDeleteModal(false);
@@ -633,19 +643,17 @@ export default function AdminCategories() {
       const { data: latestCats } = await supabase.from('categories').select('*');
       let latestList = (latestCats || []) as Category[];
       
-      // Fallback local merge
-      const savedLocal = localStorage.getItem('local_admin_categories') || localStorage.getItem('categories');
-      if (savedLocal) {
-        try {
-          const parsed = JSON.parse(savedLocal);
-          if (Array.isArray(parsed)) {
-            const map = new Map<string, Category>();
-            latestList.forEach(c => map.set(c.id, c));
-            parsed.forEach((c: Category) => { if (c && c.id) map.set(c.id, c); });
-            latestList = Array.from(map.values());
+      if (!latestCats || latestCats.length === 0) {
+        const savedLocal = localStorage.getItem('local_admin_categories') || localStorage.getItem('categories');
+        if (savedLocal) {
+          try {
+            const parsed = JSON.parse(savedLocal);
+            if (Array.isArray(parsed)) {
+              latestList = parsed;
+            }
+          } catch {
+            // ignore
           }
-        } catch {
-          // ignore
         }
       }
 

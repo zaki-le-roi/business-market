@@ -218,17 +218,21 @@ export async function upsertWarehouseInDB(warehouse: Partial<Warehouse>): Promis
 
 export async function deleteWarehouseFromDB(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    // Check if inventory exists in this warehouse
-    const { data: levels, error: checkError } = await supabase
-      .from('inventory_levels')
-      .select('quantity')
-      .eq('warehouse_id', id);
+    // Check if inventory exists in this warehouse if table exists
+    try {
+      const { data: levels, error: checkError } = await supabase
+        .from('inventory_levels')
+        .select('quantity')
+        .eq('warehouse_id', id);
 
-    if (!checkError && levels && levels.some((l) => Number(l.quantity || 0) > 0)) {
-      return {
-        success: false,
-        error: 'Cannot delete warehouse while inventory exists. Transfer or remove the inventory first.'
-      };
+      if (!checkError && levels && levels.some((l) => Number(l.quantity || 0) > 0)) {
+        return {
+          success: false,
+          error: 'Cannot delete warehouse while inventory exists. Transfer or remove the inventory first.'
+        };
+      }
+    } catch {
+      // Table may not exist or not be queried, proceed to warehouse deletion
     }
 
     const { error } = await supabase.from('warehouses').delete().eq('id', id);

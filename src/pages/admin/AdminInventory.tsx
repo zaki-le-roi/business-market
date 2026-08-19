@@ -119,6 +119,12 @@ export default function AdminInventory() {
   const [editingSupplier, setEditingSupplier] = useState<Partial<Supplier> | null>(null);
 
   const [showPOModal, setShowPOModal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    type: 'warehouse' | 'supplier' | 'variant';
+    id: string;
+    name: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [poForm, setPoForm] = useState<{
     supplier_id: string;
     warehouse_id: string;
@@ -210,10 +216,10 @@ export default function AdminInventory() {
     }
   };
 
-  // Delete Warehouse
-  const handleDeleteWarehouse = async (id: string) => {
+  // Delete Warehouse prompt
+  const handleDeleteWarehouse = (wh: Warehouse) => {
     // Safety check: block deletion if warehouse contains active inventory
-    const activeInventory = inventoryLevels.filter((item) => item.warehouse_id === id && (Number(item.quantity_on_hand || item.quantity) > 0 || Number(item.quantity_reserved || 0) > 0));
+    const activeInventory = inventoryLevels.filter((item) => item.warehouse_id === wh.id && (Number(item.quantity_on_hand || item.quantity) > 0 || Number(item.quantity_reserved || 0) > 0));
     const totalStock = activeInventory.reduce((sum, item) => sum + Number(item.quantity_on_hand || item.quantity || 0), 0);
 
     if (totalStock > 0) {
@@ -227,23 +233,11 @@ export default function AdminInventory() {
       return;
     }
 
-    if (!confirm(tr('هل أنت تأكد من حذف هذا المستودع؟', 'Confirmer la suppression de cet entrepôt ?'))) return;
-    const res = await deleteWarehouseFromDB(id);
-    if (!res.success) {
-      showToast(res.error || tr('فشل الحذف', 'Échec de la suppression'), 'error');
-      return;
-    }
-
-    // Re-query Supabase to verify deletion
-    const freshWarehouses = await fetchWarehousesFromDB();
-    const stillExists = freshWarehouses.some((w) => w.id === id);
-
-    if (!stillExists) {
-      showToast(tr('تم حذف المستودع بنجاح', 'Entrepôt supprimé'), 'success');
-      setWarehouses(freshWarehouses);
-    } else {
-      showToast(tr('فشل التحقق من حذف المستودع من قاعدة البيانات', 'Échec de la vérification de suppression'), 'error');
-    }
+    setDeleteConfirm({
+      type: 'warehouse',
+      id: wh.id,
+      name: isAr ? wh.name_ar : wh.name_fr
+    });
   };
 
   // Adjust Stock
@@ -324,16 +318,13 @@ export default function AdminInventory() {
     }
   };
 
-  // Delete Variant
-  const handleDeleteVariant = async (id: string) => {
-    if (!confirm(tr('حذف هذا المتغير؟', 'Supprimer cette variante ?'))) return;
-    const res = await deleteProductVariantFromDB(id);
-    if (res.success) {
-      showToast(tr('تم حذف المتغير', 'Variante supprimée'), 'success');
-      loadData();
-    } else {
-      showToast(res.error || tr('فشل الحذف', 'Échec de la suppression'), 'error');
-    }
+  // Delete Variant prompt
+  const handleDeleteVariant = (v: ProductVariant) => {
+    setDeleteConfirm({
+      type: 'variant',
+      id: v.id,
+      name: isAr ? v.name_ar : v.name_fr
+    });
   };
 
   // Save Supplier
@@ -364,24 +355,80 @@ export default function AdminInventory() {
     }
   };
 
-  // Delete Supplier
-  const handleDeleteSupplier = async (id: string) => {
-    if (!confirm(tr('حذف المورد؟', 'Supprimer ce fournisseur ?'))) return;
-    const res = await deleteSupplierFromDB(id);
-    if (!res.success) {
-      showToast(res.error || tr('فشل الحذف', 'Échec de la suppression'), 'error');
-      return;
-    }
+  // Delete Supplier prompt
+  const handleDeleteSupplier = (sup: Supplier) => {
+    setDeleteConfirm({
+      type: 'supplier',
+      id: sup.id,
+      name: sup.name
+    });
+  };
 
-    // Re-query Supabase to verify deletion
-    const freshSuppliers = await fetchSuppliersFromDB();
-    const stillExists = freshSuppliers.some((s) => s.id === id);
+  // Unified Execute Delete Handler
+  const handleExecuteDelete = async () => {
+    if (!deleteConfirm || isDeleting) return;
+    setIsDeleting(true);
 
-    if (!stillExists) {
-      showToast(tr('تم حذف المورد بنجاح من Supabase', 'Fournisseur supprimé'), 'success');
-      setSuppliers(freshSuppliers);
-    } else {
-      showToast(tr('فشل التحقق من حذف المورد من قاعدة البيانات', 'Échec de la vérification de suppression'), 'error');
+    try {
+      if (deleteConfirm.type === 'warehouse') {
+        const id = deleteConfirm.id;
+        const res = await deleteWarehouseFromDB(id);
+        if (!res.success) {
+          showToast(res.error || tr('فشل حذف المستودع', 'Échec de la suppression'), 'error');
+          return;
+        }
+
+        // Optimistically remove from state immediately
+        setWarehouses((prev) => prev.filter((w) => w.id !== id));
+
+        // Re-query Supabase to verify deletion
+        const freshWarehouses = await fetchWarehousesFromDB();
+        const stillExists = freshWarehouses.some((w) => w.id === id);
+
+        if (!stillExists) {
+          showToast(tr('تم حذف المستودع بنجاح من Supabase', 'Entrepôt supprimé'), 'success');
+          setWarehouses(freshWarehouses);
+        } else {
+          showToast(tr('فشل التحقق من حذف المستودع من قاعدة البيانات', 'Échec de la vérification de suppression'), 'error');
+        }
+      } else if (deleteConfirm.type === 'supplier') {
+        const id = deleteConfirm.id;
+        const res = await deleteSupplierFromDB(id);
+        if (!res.success) {
+          showToast(res.error || tr('فشل حذف المورد', 'Échec de la suppression'), 'error');
+          return;
+        }
+
+        // Optimistically remove from state immediately
+        setSuppliers((prev) => prev.filter((s) => s.id !== id));
+
+        // Re-query Supabase to verify deletion
+        const freshSuppliers = await fetchSuppliersFromDB();
+        const stillExists = freshSuppliers.some((s) => s.id === id);
+
+        if (!stillExists) {
+          showToast(tr('تم حذف المورد بنجاح من Supabase', 'Fournisseur supprimé'), 'success');
+          setSuppliers(freshSuppliers);
+        } else {
+          showToast(tr('فشل التحقق من حذف المورد من قاعدة البيانات', 'Échec de la vérification de suppression'), 'error');
+        }
+      } else if (deleteConfirm.type === 'variant') {
+        const id = deleteConfirm.id;
+        const res = await deleteProductVariantFromDB(id);
+        if (res.success) {
+          showToast(tr('تم حذف المتغير بنجاح', 'Variante supprimée'), 'success');
+          setVariants((prev) => prev.filter((v) => v.id !== id));
+          loadData();
+        } else {
+          showToast(res.error || tr('فشل الحذف', 'Échec de la suppression'), 'error');
+        }
+      }
+    } catch (e: unknown) {
+      const err = e as Error;
+      showToast(err?.message || tr('حدث خطأ أثناء الحذف', 'Une erreur est survenue lors de la suppression'), 'error');
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirm(null);
     }
   };
 
@@ -839,7 +886,7 @@ export default function AdminInventory() {
                   </button>
                   {!wh.is_main && (
                     <button
-                      onClick={() => handleDeleteWarehouse(wh.id)}
+                      onClick={() => handleDeleteWarehouse(wh)}
                       className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-700 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -921,7 +968,7 @@ export default function AdminInventory() {
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleDeleteVariant(v.id)}
+                              onClick={() => handleDeleteVariant(v)}
                               className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-700 rounded-lg transition-colors"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -1029,7 +1076,7 @@ export default function AdminInventory() {
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleDeleteSupplier(sup.id)}
+                    onClick={() => handleDeleteSupplier(sup)}
                     className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-700 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1790,6 +1837,62 @@ export default function AdminInventory() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- CONFIRMATION MODAL FOR DELETION --- */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold text-white">
+                {deleteConfirm.type === 'warehouse'
+                  ? tr('تأكيد حذف المستودع', 'Confirmer la suppression de l\'entrepôt')
+                  : deleteConfirm.type === 'supplier'
+                  ? tr('تأكيد حذف المورد', 'Confirmer la suppression du fournisseur')
+                  : tr('تأكيد حذف المتغير', 'Confirmer la suppression de la variante')}
+              </h3>
+            </div>
+
+            <p className="text-sm text-slate-300">
+              {tr(
+                `هل أنت متأكد من رغبتك في حذف "${deleteConfirm.name}" نهائياً من قاعدة البيانات؟`,
+                `Êtes-vous sûr de vouloir supprimer définitivement "${deleteConfirm.name}" de la base de données ?`
+              )}
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 bg-slate-700 text-slate-300 rounded-xl text-sm font-semibold hover:bg-slate-600 transition-colors disabled:opacity-50"
+              >
+                {tr('إلغاء', 'Annuler')}
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleExecuteDelete}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>{tr('جاري الحذف...', 'Suppression...')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>{tr('تأكيد الحذف', 'Confirmer')}</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
