@@ -1,11 +1,12 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'dz.businessmarket.app',
+  appId: 'com.businessmarket.app',
   appName: 'Business Market',
   webDir: 'dist',
   server: {
-    androidScheme: 'https'
+    url: 'https://business-market.pages.dev',
+    cleartext: true
   }
 };
 
