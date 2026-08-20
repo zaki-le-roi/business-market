@@ -30,5 +30,5 @@ android/capacitor-cordova-android-plugins/
 *.sw?
 .env
 jdk-*
-gradle*
+/gradle-*
 install_android_sdk.sh

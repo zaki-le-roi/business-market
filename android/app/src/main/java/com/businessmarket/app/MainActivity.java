@@ -1,4 +1,4 @@
-package dz.businessmarket.app;
+package com.businessmarket.app;
 
 import com.getcapacitor.BridgeActivity;
 
