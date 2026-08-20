@@ -9,6 +9,8 @@ import { isValidAlgerianPhone, normalizePhone, generateOtp } from '../../lib/pho
 import { hashPassword } from '../../lib/auth';
 import { sendEmail, generateOtpEmailTemplate } from '../../lib/email';
 import { ensureAuthenticatedAdmin } from '../../lib/storage';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 export default function LoginPage() {
   const { t, lang, dir } = useLanguage();
@@ -64,6 +66,28 @@ export default function LoginPage() {
       setLoading(true);
       setError('');
       
+      // 1. Native Android / Capacitor APK flow
+      if (Capacitor.isNativePlatform()) {
+        const { data, error: oAuthErr } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: 'com.businessmarket.app://auth/callback',
+            skipBrowserRedirect: true,
+          },
+        });
+
+        if (oAuthErr) {
+          throw oAuthErr;
+        }
+
+        if (data?.url) {
+          // Open Chrome Custom Tab / system browser to avoid WebView auth blocking
+          await Browser.open({ url: data.url, windowName: '_self' });
+        }
+        return;
+      }
+
+      // 2. Web browser flow (preserves web functionality intact)
       const g = (window as unknown as { google?: { accounts?: { id?: { prompt: () => void } } } }).google;
       if (g?.accounts?.id?.prompt) {
         g.accounts.id.prompt();

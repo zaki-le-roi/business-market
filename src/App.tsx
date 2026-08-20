@@ -45,6 +45,7 @@ import AdminCSVImportExport from './pages/admin/AdminCSVImportExport';
 import AdminInventory from './pages/admin/AdminInventory';
 import AdminSocialCommerce from './pages/admin/AdminSocialCommerce';
 import AndroidBackButtonHandler from './components/AndroidBackButtonHandler';
+import AndroidAuthDeepLinkHandler from './components/AndroidAuthDeepLinkHandler';
 
 export default function App() {
   return (
@@ -53,6 +54,7 @@ export default function App() {
         <CartProvider>
           <BrowserRouter>
           <AndroidBackButtonHandler />
+          <AndroidAuthDeepLinkHandler />
           <AppUpdateChecker />
           <Routes>
             <Route path="/" element={<StoreLayout />}>
