@@ -1,7 +1,11 @@
 import { StrictMode, Component, ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import App from './App.tsx';
 import './index.css';
+
+// Notify Capgo updater that the app is ready and loaded successfully
+CapacitorUpdater.notifyAppReady().catch(() => {});
 
 interface ErrorBoundaryState {
   error: Error | null;
