@@ -70,10 +70,14 @@ export default function LoginPage() {
       }
 
       // Supabase OAuth
+      const redirectUrl = window.location.origin.includes('localhost') 
+        ? window.location.origin + '/login' 
+        : 'https://business-market-olt.pages.dev/login';
+
       const { error: oAuthErr } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/login',
+          redirectTo: redirectUrl,
         },
       });
 
