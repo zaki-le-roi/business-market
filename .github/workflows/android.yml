@@ -24,7 +24,7 @@ jobs:
       - name: Build Web Production
         run: npm run build
 
-      - name: Add and Sync Android Platform
+      - name: Add Android Platform & Sync
         run: |
           npx cap add android || true
           npx cap sync android
