@@ -38,9 +38,13 @@ jobs:
           distribution: 'zulu'
           java-version: '21'
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
       - name: Build Android APK
         run: |
           cd android
+          gradle wrapper
           chmod +x gradlew
           ./gradlew assembleDebug
 
