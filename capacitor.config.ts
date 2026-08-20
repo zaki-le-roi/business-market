@@ -12,6 +12,11 @@ const config: CapacitorConfig = {
     CapacitorUpdater: {
       autoUpdate: true,
       resetWhenUpdate: false,
+    },
+    GoogleAuth: {
+      scopes: ['profile', 'email'],
+      serverClientId: 'https://business-market-olt.pages.dev',
+      forceCodeForRefreshToken: true,
     }
   }
 };
