@@ -15,7 +15,7 @@ const config: CapacitorConfig = {
     },
     GoogleAuth: {
       scopes: ['profile', 'email'],
-      serverClientId: 'https://business-market-olt.pages.dev',
+      serverClientId: '1055399969589-d9chat8ol17gdt9ljqpastmo69pi7f2q.apps.googleusercontent.com',
       forceCodeForRefreshToken: true,
     }
   }
