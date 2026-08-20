@@ -13,7 +13,7 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 22
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -24,9 +24,11 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
       - name: Install Dependencies
-        run: |
-          npm install --legacy-peer-deps
+        run: npm install --legacy-peer-deps
 
       - name: Build Web Production
         run: npm run build
@@ -34,15 +36,10 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Fix Gradle Wrapper Permission
-        run: |
-          cd android
-          chmod +x gradlew
-
       - name: Build Android APK
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon
+          gradle assembleDebug --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
