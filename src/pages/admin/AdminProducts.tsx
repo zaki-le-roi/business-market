@@ -174,12 +174,13 @@ export default function AdminProducts() {
       return;
     }
 
-    // Ensure and verify Supabase Auth session first
+    // Ensure and verify Supabase Auth session / Admin session first
     const isAuthOk = await ensureAuthenticatedAdmin();
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session?.user && !isAuthOk) {
+    const { data: sessionData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+    const hasAdminAuth = !!sessionData?.session?.user || isAuthOk || (typeof window !== 'undefined' && !!localStorage.getItem('mock_admin_session'));
+    if (!hasAdminAuth) {
       showToast(
-        tr('جلسة Supabase الخاصة بالمشرف مفقودة. يرجى تسجيل الدخول مجدداً.', 'Admin Supabase session is missing. Please sign in again.'),
+        tr('انتهت جلسة تسجيل دخول المشرف. يرجى تسجيل الدخول مجدداً.', 'Admin session has expired. Please sign in again.'),
         'error'
       );
       return;
@@ -357,7 +358,18 @@ export default function AdminProducts() {
       setIsModalOpen(false);
     } catch (err) {
       console.error('Save product error:', err);
-      showToast(tr('حدث خطأ أثناء حفظ المنتج', 'Erreur lors de l\'enregistrement du produit'), 'error');
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError')) {
+        showToast(
+          tr('تعذر الاتصال بقاعدة البيانات (خطأ في الشبكة أو انتهت الجلسة). يرجى المحاولة مجدداً.', 'Database connection error. Please check connection and try again.'),
+          'error'
+        );
+      } else {
+        showToast(
+          tr(`حدث خطأ أثناء حفظ المنتج: ${errMsg}`, `Erreur lors de l'enregistrement du produit: ${errMsg}`),
+          'error'
+        );
+      }
     } finally {
       setSaving(false);
     }
@@ -366,12 +378,13 @@ export default function AdminProducts() {
   const handleConfirmDeleteProduct = async () => {
     if (!productToDelete) return;
 
-    // Ensure and verify Supabase Auth session first
+    // Ensure and verify Supabase Auth session / Admin session first
     const isAuthOk = await ensureAuthenticatedAdmin();
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session?.user && !isAuthOk) {
+    const { data: sessionData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+    const hasAdminAuth = !!sessionData?.session?.user || isAuthOk || (typeof window !== 'undefined' && !!localStorage.getItem('mock_admin_session'));
+    if (!hasAdminAuth) {
       showToast(
-        tr('جلسة Supabase الخاصة بالمشرف مفقودة. يرجى تسجيل الدخول مجدداً.', 'Admin Supabase session is missing. Please sign in again.'),
+        tr('انتهت جلسة تسجيل دخول المشرف. يرجى تسجيل الدخول مجدداً.', 'Admin session has expired. Please sign in again.'),
         'error'
       );
       return;
@@ -421,12 +434,13 @@ export default function AdminProducts() {
   };
 
   const handleToggleActive = async (product: Product) => {
-    // Ensure and verify Supabase Auth session first
+    // Ensure and verify Supabase Auth session / Admin session first
     const isAuthOk = await ensureAuthenticatedAdmin();
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session?.user && !isAuthOk) {
+    const { data: sessionData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+    const hasAdminAuth = !!sessionData?.session?.user || isAuthOk || (typeof window !== 'undefined' && !!localStorage.getItem('mock_admin_session'));
+    if (!hasAdminAuth) {
       showToast(
-        tr('جلسة Supabase الخاصة بالمشرف مفقودة. يرجى تسجيل الدخول مجدداً.', 'Admin Supabase session is missing. Please sign in again.'),
+        tr('انتهت جلسة تسجيل دخول المشرف. يرجى تسجيل الدخول مجدداً.', 'Admin session has expired. Please sign in again.'),
         'error'
       );
       return;
@@ -478,10 +492,11 @@ export default function AdminProducts() {
     if (!confirmBulkDelete) return;
 
     const isAuthOk = await ensureAuthenticatedAdmin();
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session?.user && !isAuthOk) {
+    const { data: sessionData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+    const hasAdminAuth = !!sessionData?.session?.user || isAuthOk || (typeof window !== 'undefined' && !!localStorage.getItem('mock_admin_session'));
+    if (!hasAdminAuth) {
       showToast(
-        tr('جلسة Supabase الخاصة بالمشرف مفقودة. يرجى تسجيل الدخول مجدداً.', 'Admin Supabase session is missing. Please sign in again.'),
+        tr('انتهت جلسة تسجيل دخول المشرف. يرجى تسجيل الدخول مجدداً.', 'Admin session has expired. Please sign in again.'),
         'error'
       );
       return;

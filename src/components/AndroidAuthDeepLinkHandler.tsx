@@ -144,24 +144,29 @@ export default function AndroidAuthDeepLinkHandler() {
       isHandlingAuth.current = true;
 
       try {
-        // Close Chrome Custom Tab / in-app browser
-        await Browser.close().catch(() => {});
+        // Asynchronously close Chrome Custom Tab / in-app browser
+        Browser.close().catch(() => {});
 
         const hashIndex = urlStr.indexOf('#');
         const queryIndex = urlStr.indexOf('?');
 
-        let params: URLSearchParams;
-        if (hashIndex !== -1) {
-          params = new URLSearchParams(urlStr.substring(hashIndex + 1));
-        } else if (queryIndex !== -1) {
-          params = new URLSearchParams(urlStr.substring(queryIndex + 1));
-        } else {
-          params = new URLSearchParams();
+        let queryParams = new URLSearchParams();
+        let hashParams = new URLSearchParams();
+
+        if (queryIndex !== -1) {
+          const queryStr = hashIndex > queryIndex 
+            ? urlStr.substring(queryIndex + 1, hashIndex) 
+            : urlStr.substring(queryIndex + 1);
+          queryParams = new URLSearchParams(queryStr);
         }
 
-        const accessToken = params.get('access_token');
-        const refreshToken = params.get('refresh_token');
-        const code = params.get('code');
+        if (hashIndex !== -1) {
+          hashParams = new URLSearchParams(urlStr.substring(hashIndex + 1));
+        }
+
+        const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+        const code = queryParams.get('code') || hashParams.get('code');
 
         let authedUser = null;
 
@@ -195,14 +200,22 @@ export default function AndroidAuthDeepLinkHandler() {
       }
     };
 
-    // 1. Listen for deep link events while app is open / backgrounded
+    // 1. Check current window location for auth tokens on mount
+    if (typeof window !== 'undefined' && window.location) {
+      const fullHref = window.location.href;
+      if (fullHref.includes('access_token=') || fullHref.includes('code=') || fullHref.includes('/auth/callback')) {
+        handleAuthUrl(fullHref);
+      }
+    }
+
+    // 2. Listen for deep link events while app is open / backgrounded
     const sub = CapApp.addListener('appUrlOpen', (data) => {
       if (data?.url) {
         handleAuthUrl(data.url);
       }
     });
 
-    // 2. Check if app was cold-launched directly with a deep link URL
+    // 3. Check if app was cold-launched directly with a deep link URL
     CapApp.getLaunchUrl()
       .then((launchUrl) => {
         if (launchUrl?.url) {
@@ -211,14 +224,10 @@ export default function AndroidAuthDeepLinkHandler() {
       })
       .catch(() => {});
 
-    // 3. Listen to Supabase onAuthStateChange as well
+    // 4. Listen to Supabase onAuthStateChange
     const { data: authSub } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
-        const storedCustomer = localStorage.getItem('customer');
-        const storedAdmin = localStorage.getItem('mock_admin_session');
-        if (!storedCustomer && !storedAdmin) {
-          await establishCustomerAndSession(session.user);
-        }
+        await establishCustomerAndSession(session.user);
       }
     });
 

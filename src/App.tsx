@@ -19,6 +19,7 @@ import AccountPage from './pages/store/AccountPage';
 import SupportPage from './pages/store/SupportPage';
 import DataDeletionStatusPage from './pages/store/DataDeletionStatusPage';
 import DataDeletionInstructionsPage from './pages/store/DataDeletionInstructionsPage';
+import AuthCallbackPage from './pages/store/AuthCallbackPage';
 import CMSPageViewer from './pages/store/CMSPageViewer';
 import WholesalePortalPage from './pages/store/WholesalePortalPage';
 import NotFoundPage from './pages/store/NotFoundPage';
@@ -68,6 +69,7 @@ export default function App() {
               <Route path="order/success/:orderNumber" element={<OrderSuccessPage />} />
               <Route path="track" element={<TrackOrderPage />} />
               <Route path="login" element={<LoginPage />} />
+              <Route path="auth/callback" element={<AuthCallbackPage />} />
               <Route path="register" element={<RegisterPage />} />
               <Route path="complete-profile" element={<CompleteProfilePage />} />
               <Route path="account" element={<AccountPage />} />

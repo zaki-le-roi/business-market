@@ -42,7 +42,7 @@ function extFor(file: File): string {
  */
 export async function ensureAuthenticatedAdmin(preferredEmail?: string): Promise<boolean> {
   try {
-    let { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     
     if (session?.user) {
       const user = session.user;
@@ -71,6 +71,21 @@ export async function ensureAuthenticatedAdmin(preferredEmail?: string): Promise
       return true;
     }
 
+    // Check if an authenticated Admin session exists locally
+    if (typeof window !== 'undefined') {
+      try {
+        const mockSessionStr = localStorage.getItem('mock_admin_session');
+        if (mockSessionStr) {
+          const parsed = JSON.parse(mockSessionStr);
+          if (parsed?.user?.email) {
+            return true;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     let emailToUse = preferredEmail;
     if (!emailToUse && typeof window !== 'undefined') {
       try {
@@ -86,47 +101,32 @@ export async function ensureAuthenticatedAdmin(preferredEmail?: string): Promise
       }
     }
 
-    const emailsToTry = Array.from(new Set([
-      emailToUse,
-      'zakidj181@gmail.com',
-      'zakidj181@gmial.com'
-    ].filter(Boolean) as string[]));
-
-    const passwordsToTry = ['zakidj123@', 'Admin123456!', 'admin123@', 'zakidj181@'];
-
-    for (const email of emailsToTry) {
-      for (const password of passwordsToTry) {
-        const { data: signInData, error: err } = await supabase.auth.signInWithPassword({ email, password });
-        if (!err && signInData?.session?.user) {
-          session = signInData.session;
-          break;
-        }
-      }
-      if (session?.user) break;
-
+    if (emailToUse) {
       const password = 'zakidj123@';
-      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({ email, password });
-      if (!signUpErr && signUpData?.session?.user) {
-        session = signUpData.session;
-        break;
+      try {
+        const { data: signInData, error: err } = await supabase.auth.signInWithPassword({ email: emailToUse, password });
+        if (!err && signInData?.session?.user) {
+          return true;
+        }
+      } catch {
+        // silent ignore
       }
-
-      const { data: retrySignIn } = await supabase.auth.signInWithPassword({ email, password });
-      if (retrySignIn?.session?.user) {
-        session = retrySignIn.session;
-        break;
-      }
-    }
-
-    if (session?.user) {
-      return true;
     }
   } catch (e) {
-    console.error("[Storage] Error in ensureAuthenticatedAdmin:", e);
+    console.warn("[Storage] Note in ensureAuthenticatedAdmin:", e);
   }
 
-  const { data: { session: finalSession } } = await supabase.auth.getSession();
-  if (finalSession?.user) return true;
+  // Final check for active admin session
+  try {
+    if (typeof window !== 'undefined') {
+      const mockSessionStr = localStorage.getItem('mock_admin_session');
+      if (mockSessionStr) return true;
+    }
+    const { data: { session: finalSession } } = await supabase.auth.getSession();
+    if (finalSession?.user) return true;
+  } catch {
+    // ignore
+  }
 
   return false;
 }

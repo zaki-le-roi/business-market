@@ -90,13 +90,17 @@ export default function LoginPage() {
       // 2. Web browser flow (preserves web functionality intact)
       const g = (window as unknown as { google?: { accounts?: { id?: { prompt: () => void } } } }).google;
       if (g?.accounts?.id?.prompt) {
-        g.accounts.id.prompt();
+        try {
+          g.accounts.id.prompt();
+        } catch {
+          // fallback to standard OAuth
+        }
       }
 
       // Supabase OAuth
       const redirectUrl = window.location.origin.includes('localhost') 
-        ? window.location.origin + '/login' 
-        : 'https://business-market-olt.pages.dev/login';
+        ? window.location.origin + '/auth/callback' 
+        : 'https://business-market-olt.pages.dev/auth/callback';
 
       const { error: oAuthErr } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -327,8 +331,68 @@ export default function LoginPage() {
     }
   }, [resendTimer]);
 
-  // Load Google Sign-In SDK dynamically (Google Identity Services)
+  // Handle URL tokens / OAuth callback on mount (if user returns to /login with tokens)
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const fullUrl = window.location.href;
+    if (fullUrl.includes('access_token=') || fullUrl.includes('code=')) {
+      const hashIndex = fullUrl.indexOf('#');
+      const queryIndex = fullUrl.indexOf('?');
+
+      let queryParams = new URLSearchParams();
+      let hashParams = new URLSearchParams();
+
+      if (queryIndex !== -1) {
+        const queryStr = hashIndex > queryIndex 
+          ? fullUrl.substring(queryIndex + 1, hashIndex) 
+          : fullUrl.substring(queryIndex + 1);
+        queryParams = new URLSearchParams(queryStr);
+      }
+
+      if (hashIndex !== -1) {
+        hashParams = new URLSearchParams(fullUrl.substring(hashIndex + 1));
+      }
+
+      const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+      const code = queryParams.get('code') || hashParams.get('code');
+
+      if (accessToken && refreshToken) {
+        setLoading(true);
+        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+          .then(({ data }) => {
+            if (data?.user) {
+              const meta = data.user.user_metadata || {};
+              handleGoogleLogin(
+                data.user.email || '',
+                (meta.full_name as string) || (meta.name as string),
+                (meta.avatar_url as string) || (meta.picture as string)
+              );
+            }
+          })
+          .catch(() => setLoading(false));
+      } else if (code) {
+        setLoading(true);
+        supabase.auth.exchangeCodeForSession(code)
+          .then(({ data }) => {
+            if (data?.user) {
+              const meta = data.user.user_metadata || {};
+              handleGoogleLogin(
+                data.user.email || '',
+                (meta.full_name as string) || (meta.name as string),
+                (meta.avatar_url as string) || (meta.picture as string)
+              );
+            }
+          })
+          .catch(() => setLoading(false));
+      }
+    }
+  }, [handleGoogleLogin]);
+
+  // Load Google Sign-In SDK dynamically for Web (Google Identity Services)
+  useEffect(() => {
+    // Only load GSI on Web browsers, never on native Android/iOS WebView
+    if (Capacitor.isNativePlatform()) return;
     if (!isGoogleConfigured || !googleClientId) return;
 
     interface GoogleCredentialResponse {
