@@ -74,29 +74,30 @@ export default function AdminProducts() {
         console.warn('Supabase fetch products warning:', error.message);
       }
 
-      let list = (data || []) as Product[];
-      const saved = localStorage.getItem('local_admin_products') || localStorage.getItem('products');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const map = new Map<string, Product>();
-            list.forEach(p => map.set(p.id, p));
-            parsed.forEach((p: Product) => {
-              if (p && p.id) {
-                map.set(p.id, { ...(map.get(p.id) || {}), ...p });
-              }
-            });
-            list = Array.from(map.values());
+      let list: Product[] = [];
+      if (!error && Array.isArray(data)) {
+        list = data as Product[];
+      } else {
+        const saved = localStorage.getItem('local_admin_products') || localStorage.getItem('products');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              list = parsed;
+            }
+          } catch {
+            // fallback
           }
-        } catch {
-          // fallback
         }
       }
 
       setProducts(list);
-      localStorage.setItem('local_admin_products', JSON.stringify(list));
-      localStorage.setItem('products', JSON.stringify(list));
+      try {
+        localStorage.setItem('local_admin_products', JSON.stringify(list));
+        localStorage.setItem('products', JSON.stringify(list));
+      } catch {
+        // ignore
+      }
     } catch (err) {
       console.error('Fetch products error:', err);
     } finally {

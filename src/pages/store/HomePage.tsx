@@ -177,47 +177,51 @@ export default function HomePage() {
         // Ignored if legacy table is removed
       }
 
-      let dbProds: Product[] = (productsResponse.data || []) as Product[];
-      let dbCats: Category[] = (categoriesResponse.data || []) as Category[];
-
-      // Merge local products if present
-      const localProdsRaw = localStorage.getItem('local_admin_products') || localStorage.getItem('products');
-      if (localProdsRaw) {
+      let dbProds: Product[] = [];
+      if (!productsResponse.error && Array.isArray(productsResponse.data)) {
+        dbProds = productsResponse.data as Product[];
         try {
-          const parsedLocal: Product[] = JSON.parse(localProdsRaw);
-          if (Array.isArray(parsedLocal) && parsedLocal.length > 0) {
-            const prodMap = new Map<string, Product>();
-            dbProds.forEach(p => prodMap.set(p.id, p));
-            parsedLocal.forEach(p => {
-              if (p && p.id) {
-                // If local product exists, local edits take precedence over cached DB state
-                prodMap.set(p.id, { ...(prodMap.get(p.id) || {}), ...p });
-              }
-            });
-            dbProds = Array.from(prodMap.values());
+          localStorage.setItem('local_admin_products', JSON.stringify(dbProds));
+          localStorage.setItem('products', JSON.stringify(dbProds));
+        } catch {
+          // ignore
+        }
+      } else {
+        // Fallback to local storage only if Supabase request failed or returned empty
+        const localProdsRaw = localStorage.getItem('local_admin_products') || localStorage.getItem('products');
+        if (localProdsRaw) {
+          try {
+            const parsedLocal: Product[] = JSON.parse(localProdsRaw);
+            if (Array.isArray(parsedLocal)) {
+              dbProds = parsedLocal;
+            }
+          } catch (e) {
+            console.warn('[HomePage] Failed to parse local products storage:', e);
           }
-        } catch (e) {
-          console.warn('[HomePage] Failed to parse local products storage:', e);
         }
       }
 
-      // Merge local categories if present
-      const localCatsRaw = localStorage.getItem('local_admin_categories') || localStorage.getItem('categories');
-      if (localCatsRaw) {
+      let dbCats: Category[] = [];
+      if (!categoriesResponse.error && Array.isArray(categoriesResponse.data)) {
+        dbCats = categoriesResponse.data as Category[];
         try {
-          const parsedCats: Category[] = JSON.parse(localCatsRaw);
-          if (Array.isArray(parsedCats) && parsedCats.length > 0) {
-            const catMap = new Map<string, Category>();
-            dbCats.forEach(c => catMap.set(c.id, c));
-            parsedCats.forEach(c => {
-              if (c && c.id && c.is_active !== false) {
-                catMap.set(c.id, { ...(catMap.get(c.id) || {}), ...c });
-              }
-            });
-            dbCats = Array.from(catMap.values());
+          localStorage.setItem('local_admin_categories', JSON.stringify(dbCats));
+          localStorage.setItem('categories', JSON.stringify(dbCats));
+        } catch {
+          // ignore
+        }
+      } else {
+        // Fallback to local categories only if Supabase request failed
+        const localCatsRaw = localStorage.getItem('local_admin_categories') || localStorage.getItem('categories');
+        if (localCatsRaw) {
+          try {
+            const parsedCats: Category[] = JSON.parse(localCatsRaw);
+            if (Array.isArray(parsedCats)) {
+              dbCats = parsedCats.filter(c => c && c.is_active !== false);
+            }
+          } catch (e) {
+            console.warn('[HomePage] Failed to parse local categories storage:', e);
           }
-        } catch (e) {
-          console.warn('[HomePage] Failed to parse local categories storage:', e);
         }
       }
 

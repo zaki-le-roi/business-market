@@ -34,19 +34,21 @@ export default function ProductDetailPage() {
       console.warn('[ProductDetailPage] Supabase fetch warning:', e);
     }
 
-    // Check local storage fallback if not found or edited locally
-    const localSaved = localStorage.getItem('local_admin_products') || localStorage.getItem('products');
-    if (localSaved) {
-      try {
-        const parsed: Product[] = JSON.parse(localSaved);
-        if (Array.isArray(parsed)) {
-          const matched = parsed.find(p => p.slug === slug || p.id === slug);
-          if (matched) {
-            foundProd = foundProd ? { ...foundProd, ...matched } : matched;
+    // Only fallback to local storage if product was not found in Supabase
+    if (!foundProd) {
+      const localSaved = localStorage.getItem('local_admin_products') || localStorage.getItem('products');
+      if (localSaved) {
+        try {
+          const parsed: Product[] = JSON.parse(localSaved);
+          if (Array.isArray(parsed)) {
+            const matched = parsed.find(p => p.slug === slug || p.id === slug);
+            if (matched) {
+              foundProd = matched;
+            }
           }
+        } catch {
+          // ignore
         }
-      } catch {
-        // ignore
       }
     }
 

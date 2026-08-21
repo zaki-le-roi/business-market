@@ -443,46 +443,49 @@ export default function ProductsPage() {
         supabase.from('products').select('*').eq('is_active', true),
       ]);
 
-      let loadedCats = (catRes.data || []) as Category[];
-      let loadedProds = (prodRes.data || []) as Product[];
-
-      // Merge local products if present
-      const localSaved = localStorage.getItem('local_admin_products') || localStorage.getItem('products');
-      if (localSaved) {
+      let loadedCats: Category[] = [];
+      if (!catRes.error && Array.isArray(catRes.data)) {
+        loadedCats = catRes.data as Category[];
         try {
-          const parsed = JSON.parse(localSaved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const map = new Map<string, Product>();
-            loadedProds.forEach(p => map.set(p.id, p));
-            parsed.forEach((p: Product) => {
-              if (p && p.id) {
-                map.set(p.id, { ...(map.get(p.id) || {}), ...p });
-              }
-            });
-            loadedProds = Array.from(map.values()).filter(p => p.is_active !== false);
-          }
+          localStorage.setItem('local_admin_categories', JSON.stringify(loadedCats));
+          localStorage.setItem('categories', JSON.stringify(loadedCats));
         } catch {
-          // fallback
+          // ignore
+        }
+      } else {
+        const localCatsSaved = localStorage.getItem('local_admin_categories') || localStorage.getItem('categories');
+        if (localCatsSaved) {
+          try {
+            const parsedCats = JSON.parse(localCatsSaved);
+            if (Array.isArray(parsedCats)) {
+              loadedCats = parsedCats.filter((c: Category) => c && c.is_active !== false);
+            }
+          } catch {
+            // fallback
+          }
         }
       }
 
-      // Merge local categories if present
-      const localCatsSaved = localStorage.getItem('local_admin_categories') || localStorage.getItem('categories');
-      if (localCatsSaved) {
+      let loadedProds: Product[] = [];
+      if (!prodRes.error && Array.isArray(prodRes.data)) {
+        loadedProds = prodRes.data as Product[];
         try {
-          const parsedCats = JSON.parse(localCatsSaved);
-          if (Array.isArray(parsedCats) && parsedCats.length > 0) {
-            const catMap = new Map<string, Category>();
-            loadedCats.forEach(c => catMap.set(c.id, c));
-            parsedCats.forEach((c: Category) => {
-              if (c && c.id && c.is_active !== false) {
-                catMap.set(c.id, { ...(catMap.get(c.id) || {}), ...c });
-              }
-            });
-            loadedCats = Array.from(catMap.values());
-          }
+          localStorage.setItem('local_admin_products', JSON.stringify(loadedProds));
+          localStorage.setItem('products', JSON.stringify(loadedProds));
         } catch {
-          // fallback
+          // ignore
+        }
+      } else {
+        const localSaved = localStorage.getItem('local_admin_products') || localStorage.getItem('products');
+        if (localSaved) {
+          try {
+            const parsed = JSON.parse(localSaved);
+            if (Array.isArray(parsed)) {
+              loadedProds = parsed.filter((p: Product) => p && p.is_active !== false);
+            }
+          } catch {
+            // fallback
+          }
         }
       }
 
