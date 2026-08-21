@@ -1,0 +1,11 @@
+{
+  "versionCode": 1,
+  "versionName": "1.0.0",
+  "apkUrl": "https://github.com/zaki-le-roi/business-market/releases/latest/download/business-market.apk",
+  "latestApkUrl": "https://github.com/zaki-le-roi/business-market/releases/latest/download/business-market.apk",
+  "publishedAt": "2026-08-21T11:26:25.594Z",
+  "releaseNotes": "Initial automated release",
+  "notes_ar": "تحديث تلقائي جديد لتحسين الأداء والميزات",
+  "notes_fr": "Mise à jour automatique pour améliorer les performances",
+  "isMandatory": false
+}

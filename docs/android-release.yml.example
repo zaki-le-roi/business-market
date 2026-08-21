@@ -1,0 +1,81 @@
+# Optional: To enable automatic GitHub Releases creation directly from GitHub Actions,
+# you can copy this file to .github/workflows/android.yml on GitHub.
+# Ensure your Personal Access Token or workflow permissions has 'contents: write' and 'workflow' scope.
+name: Build and Publish Android APK
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Java JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      - name: Setup Gradle 8.13
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.13'
+
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build Web Production
+        run: |
+          npm run build
+          cp public/version.json dist/version.json 2>/dev/null || true
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build Android APK
+        env:
+          APP_VERSION_CODE: ${{ github.run_number }}
+          APP_VERSION_NAME: 1.0.${{ github.run_number }}
+        run: |
+          cd android
+          gradle assembleDebug --no-daemon
+
+      - name: Prepare Release Assets
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk business-market.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BusinessMarket-App
+          path: business-market.apk
+
+      - name: Publish GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v1.0.${{ github.run_number }}"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" business-market.apk public/version.json --clobber
+          else
+            gh release create "$TAG" \
+              business-market.apk \
+              public/version.json \
+              --title "Release $TAG" \
+              --notes "Automated APK build and release for commit ${{ github.sha }}" \
+              --latest
+          fi

@@ -7,8 +7,22 @@ android {
         applicationId "com.businessmarket.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        def versionJsonFile = file('../../public/version.json')
+        def parsedVersionCode = 1
+        def parsedVersionName = "1.0.0"
+        if (versionJsonFile.exists()) {
+            try {
+                def parsedJson = new groovy.json.JsonSlurper().parseText(versionJsonFile.text)
+                if (parsedJson.versionCode) parsedVersionCode = parsedJson.versionCode.toInteger()
+                if (parsedJson.versionName) parsedVersionName = parsedJson.versionName.toString()
+            } catch (Exception ignored) {}
+        }
+
+        def appVersionCode = project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : (System.getenv("APP_VERSION_CODE") ? System.getenv("APP_VERSION_CODE").toInteger() : parsedVersionCode)
+        def appVersionName = project.hasProperty('versionName') ? project.property('versionName') : (System.getenv("APP_VERSION_NAME") ?: parsedVersionName)
+
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
