@@ -31,6 +31,12 @@ android {
         }
     }
     signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'businessmarket'
+            keyAlias 'businessmarket'
+            keyPassword 'businessmarket'
+        }
         release {
             def keystorePath = System.getenv("KEYSTORE_PATH") ?: "release.keystore"
             def keystoreFile = file(keystorePath)
@@ -39,10 +45,18 @@ android {
                 storePassword System.getenv("KEYSTORE_PASSWORD")
                 keyAlias System.getenv("KEY_ALIAS") ?: "businessmarket"
                 keyPassword System.getenv("KEY_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD")
+            } else if (file('debug.keystore').exists()) {
+                storeFile file('debug.keystore')
+                storePassword 'businessmarket'
+                keyAlias 'businessmarket'
+                keyPassword 'businessmarket'
             }
         }
     }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             signingConfig signingConfigs.release
             minifyEnabled false

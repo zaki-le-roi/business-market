@@ -22,7 +22,8 @@ android/capacitor-cordova-android-plugins/
 *.jks
 *.p12
 *.key
-release.keystore
+!android/app/debug.keystore
+!android/app/release.keystore
 
 .vscode/*
 !.vscode/extensions.json
