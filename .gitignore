@@ -18,6 +18,11 @@ android/app/build/
 android/local.properties
 android/capacitor-cordova-android-plugins/
 *.timestamp-*
+*.keystore
+*.jks
+*.p12
+*.key
+release.keystore
 
 .vscode/*
 !.vscode/extensions.json
