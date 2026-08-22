@@ -1,11 +1,11 @@
 {
-  "versionCode": 1,
-  "versionName": "1.0.0",
-  "apkUrl": "https://github.com/zaki-le-roi/business-market/releases/latest/download/business-market.apk",
+  "versionCode": 2,
+  "versionName": "1.0.1",
+  "apkUrl": "https://github.com/zaki-le-roi/business-market/releases/download/v1.0.1/business-market.apk",
   "latestApkUrl": "https://github.com/zaki-le-roi/business-market/releases/latest/download/business-market.apk",
-  "publishedAt": "2026-08-21T11:26:25.594Z",
-  "releaseNotes": "Initial automated release",
-  "notes_ar": "تحديث تلقائي جديد لتحسين الأداء والميزات",
-  "notes_fr": "Mise à jour automatique pour améliorer les performances",
+  "publishedAt": "2026-08-22T16:45:00.000Z",
+  "releaseNotes": "Official Business Market logo launcher icon and stability updates",
+  "notes_ar": "تحديث الأيقونة الرسمية لتطبيق Business Market وتحسينات الأداء",
+  "notes_fr": "Mise à jour de l'icône officielle de l'application Business Market et stabilité",
   "isMandatory": false
 }
